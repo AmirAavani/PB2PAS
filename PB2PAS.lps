@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <Version Value="11"/>
+    <BuildModes Active="Default"/>
+    <Units Count="7">
+      <Unit0>
+        <Filename Value="PB2PAS.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <CursorPos X="95" Y="18"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="../General-Purpose-Units/NameValueCollectionUnit.pas"/>
+        <EditorIndex Value="-1"/>
+        <TopLine Value="93"/>
+        <CursorPos X="75" Y="110"/>
+        <UsageCount Value="10"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="../BotNewsPaper/DataCollector/khabarchin/FileServer/proto/FileServerUnit.pp"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="10"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="PB2PAS.lpi"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="10"/>
+        <DefaultSyntaxHighlighter Value="XML"/>
+      </Unit3>
+      <Unit4>
+        <Filename Value="PBParserUnit.pp"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="1"/>
+        <TopLine Value="444"/>
+        <CursorPos X="49" Y="472"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit4>
+      <Unit5>
+        <Filename Value="../General-Purpose-Units/ParameterManagerUnit.pp"/>
+        <EditorIndex Value="3"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit5>
+      <Unit6>
+        <Filename Value="ProtoHelperUnit.pp"/>
+        <EditorIndex Value="2"/>
+        <CursorPos X="5"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit6>
+    </Units>
+    <JumpHistory Count="4" HistoryIndex="3">
+      <Position1>
+        <Filename Value="PB2PAS.lpr"/>
+        <Caret Line="15" Column="69"/>
+      </Position1>
+      <Position2>
+        <Filename Value="PB2PAS.lpr"/>
+        <Caret Line="9" Column="34"/>
+      </Position2>
+      <Position3>
+        <Filename Value="PB2PAS.lpr"/>
+        <Caret Line="18" Column="95"/>
+      </Position3>
+      <Position4>
+        <Filename Value="PBParserUnit.pp"/>
+        <Caret Line="247" Column="21" TopLine="230"/>
+      </Position4>
+    </JumpHistory>
+    <RunParams>
+      <FormatVersion Value="2"/>
+      <Modes Count="0" ActiveMode=""/>
+    </RunParams>
+  </ProjectSession>
+</CONFIG>
