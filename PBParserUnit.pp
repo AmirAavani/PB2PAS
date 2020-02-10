@@ -15,13 +15,42 @@ uses
   strutils;
 
 type
+  TTokenKind = (ttkStart, ttkDot, ttkOpenBrace, ttkCloseBrace, ttkOpenPar,
+    ttkClosePar, ttkSemiColon, ttkEqualSign, ttkStar,
+    ttkColon, ttkComma, ttkDoubleQuote, ttkSingleQuote,
+    ttkMinus, ttkPlus, ttkQuestionMark, ttkLessThan, ttkGreaterThan, ttkOpenBracket,
+      ttkCloseBracket,
+    ttkIdentifier, ttkComment, ttkNumber, ttkSpace, ttkSlash, ttkEndLine, ttkEOF);
+  TCharKind = (tckStart, tckDot, tckOpenBrace, tckCloseBrace, tckOpenPar,
+    tckClosePar, tckSemiColon, tckEqualSign, tckStar,
+      tckColon, tckComma, tckDoubleQuote, tckSingleQuote,
+      tckMinus, tckPlus, tckQuestionMark, tckLessThan, tckGreaterThan, tckOpenBracket,
+      tckCloseBracket,
+      tckLetter, tckDigit,  tckUnderline, tckSpace, tckSlash, tckBackSlash,
+      tckEndLine, tckEoF);
+  { TToken }
+
+  TToken = record
+    Kind: TTokenKind;
+    TokenString: AnsiString;
+  end;
+
+
   ENotImplementedYet = class(Exception);
 
   { EInvalidCharacter }
 
   EInvalidCharacter = class(Exception)
-  private
+  public
     constructor Create(Ch: Char; Code: Integer);
+
+  end;
+
+  { EInvalidToken }
+
+  EInvalidToken = class(Exception)
+  public
+    constructor Create(TokenStr: AnsiString; TokenKind: TTokenKind);
 
   end;
 
@@ -39,7 +68,7 @@ type
     FConstValue: TConstValue;
 
   public
-    constructor Create;//(Tokenizer: TTokenizer);
+    constructor Create(Name: TOptionName; Value: TConstValue);
 
     property OptionName: TOptionName read FOptionName;
     property ConstValue: TConstValue read FConstValue;
@@ -201,9 +230,10 @@ type
     property Messages: specialize TObjectList<TMessage> read FMessages;
     property Options: specialize TObjectList<TOption> read FOptions;
     property Enums: specialize TObjectList<TEnum> read FEnums;
+    property Maps: specialize TObjectList<TMap> read FMaps;
     property OneOfs: specialize TObjectList<TOneOf> read FOneOfs;
 
-    constructor Create; //(Tokenizer: TTokenizer);
+    constructor Create;
     destructor Destroy; override;
 
     function ToString: AnsiString; override;
@@ -248,28 +278,8 @@ type
 
   end;
 
-  TIdent = AnsiString;
-  TFullIdent = AnsiString;
-  TTokenKind = (ttkStart, ttkDot, ttkOpenBrace, ttkCloseBrace, ttkOpenPar,
-    ttkClosePar, ttkSemiColon, ttkEqualSign, ttkStar,
-    ttkColon, ttkComma, ttkDoubleQuote, ttkSingleQuote,
-    ttkMinus, ttkQuestionMark, ttkLessThan, ttkGreaterThan, ttkOpenBracket,
-      ttkCloseBracket,
-    ttkIdentifier, ttkComment, ttkNumber, ttkSpace, ttkSlash, ttkEndLine, ttkEOF);
-  TCharKind = (tckStart, tckDot, tckOpenBrace, tckCloseBrace, tckOpenPar,
-    tckClosePar, tckSemiColon, tckEqualSign, tckStar,
-      tckColon, tckComma, tckDoubleQuote, tckSingleQuote,
-      tckMinus, tckQuestionMark, tckLessThan, tckGreaterThan, tckOpenBracket,
-      tckCloseBracket,
-      tckLetter, tckDigit,  tckUnderline, tckSpace, tckSlash, tckBackSlash,
-      tckEndLine, tckEoF);
-  { TToken }
-
-  TToken = record
-    Kind: TTokenKind;
-    TokenString: AnsiString;
-  end;
-
+  TStrLit = AnsiString;
+  TConstant = AnsiString;
 
   { TTokenizer }
 
@@ -285,6 +295,8 @@ type
     function ExpectOne(Ts: array of TTokenKind): Boolean;
     function Expect(const TokenKind: TTokenKind): Boolean;
 
+    function NextTokenIsIn(Ts: array of TTokenKind): Boolean;
+    function NextTokenIsIn(Ts: array of AnsiString): Boolean;
   public
     constructor Create(Stream: TStream);
     destructor Destroy; override;
@@ -300,7 +312,9 @@ type
   protected
     FTokenizer: TTokenizer;
 
-    function ParseIdent: TIdent;
+    function ParseStrLit: TStrLit;
+    function ParseIdent: TIdentifier;
+    function ParseFullIdent: TFullIdentifier;
 
     property Tokenizer: TTokenizer read FTokenizer;
   public
@@ -315,12 +329,17 @@ type
 
   TProto3Parser = class(TProtoParser)
   private
-    OutputProto: TProto3;
-
     function ParseImport: AnsiString;
     function ParseSyntax: Boolean;
-    function ParseMessage: TMessage;
+    function ParseMessage(ResultingProto: TProto): TMessage;
     function ParseEnum: TEnum;
+    function ParsePackage: AnsiString;
+    function ParseOption: TOption;
+    function ParseOneOf: TOneOf;
+    function ParseMap: TMap;
+    function ParseMessageField(FirstToken: TToken): TMessageField;
+    function ParseConstant: TConstant;
+
   public
     constructor Create(_Tokenizer: TTokenizer);
     destructor Destroy; override;
@@ -359,21 +378,29 @@ begin
   }
 end;
 
+{ EInvalidToken }
+
+constructor EInvalidToken.Create(TokenStr: AnsiString; TokenKind: TTokenKind);
+begin
+  inherited Create(Format('Unexpected Token Visited [%s, %d]', [TokenStr, Ord(TokenKind)]))
+
+end;
+
 function TProto3Parser.ParseImport: AnsiString;
 var
   CurrentToken: TToken;
+  StartTag: TTokenKind;
   // import = "import" [ "weak" | "public" ] strLit ";"
 begin
-  Tokenizer.ExpectOne([ttkDoubleQuote, ttkSingleQuote]);
-
-  Result := '';
+  if Tokenizer.NextTokenIsIn(['weak', 'public']) then
+    Tokenizer.GetNextToken;
   CurrentToken := Tokenizer.GetNextToken;
-
-  while not (CurrentToken.Kind in [ttkDoubleQuote, ttkSingleQuote]) do
-  begin
-    Result += CurrentToken.TokenString;
-    CurrentToken := Tokenizer.GetNextToken;
-  end;
+  StartTag:= CurrentToken.Kind;
+  if not (StartTag in [ttkDoubleQuote, ttkSingleQuote]) then
+    raise EInvalidToken.Create(CurrentToken.TokenString, StartTag);
+  Result := Tokenizer.GetNextToken.TokenString;
+  while not Tokenizer.NextTokenIsIn([StartTag]) do
+    Result += Tokenizer.GetNextToken.TokenString;
   Tokenizer.ExpectOne([ttkDoubleQuote, ttkSingleQuote]);
   Tokenizer.ExpectAll([ttkSemiColon]);
 
@@ -519,59 +546,6 @@ begin
    Result += ';';
 end;
 
-function ParsePackage(Tokenizer: TTokenizer): AnsiString;
-var
-  Token: TToken;
-  // package = "package" fullIdent ";"
-begin
-  {
-  Token := Tokenizer.GetNextToken;
-  Expect(Token, [ttkIdentifier]);
-  Result := Token.TokenString;
-
-  Token := Tokenizer.GetNextToken;
-  while Token.Kind in [ttkIdentifier, ttkDot] do
-  begin
-    Result += Token.TokenString;
-    Token := Tokenizer.GetNextToken;
-  end;
-  Expect(Token, [ttkSemiColon]);
-   }
-end;
-
-function ParseFullIndet(Tokenizer: TTokenizer): TFullIdentifier;
-var
-  Token: TToken;
-
-begin
-
-end;
-
-function ParseOption(Tokenizer: TTokenizer): TOption;
-  function ParseOptionName: TOptionName;
-  var
-    Token: TToken;
-    // optionName = ( ident | "(" fullIdent ")" ) { "." ident }
-  begin
-    Token := Tokenizer.GetNextToken;
-    if Token.Kind = ttkOpenPar then
-    begin
-      Result := ParseFullIndet(Tokenizer);
-//      Tokenizer.;
-    end;
-
-  end;
-
-var
-  Token: TToken;
-  OptionName: TOptionName;
-//  option = "option" optionName  "=" constant ";"
-//  optionName = ( ident | "(" fullIdent ")" ) { "." ident }
-begin
-  OptionName := ParseOptionName;
-
-end;
-
 procedure GenerateCode(InputFile: AnsiString);
 begin
   TProto.GenerateCode(InputFile);
@@ -579,8 +553,55 @@ end;
 
 { TProtoParser }
 
-function TProtoParser.ParseIdent: TIdent;
+function TProtoParser.ParseStrLit: TStrLit;
+var
+  Token: TToken;
+
 begin
+  Result := '';
+  if Tokenizer.NextTokenIsIn([ttkSingleQuote]) then
+  begin
+    Tokenizer.GetNextToken;
+    while Tokenizer.NextTokenIsIn([ttkSingleQuote]) do
+      Result += Tokenizer.GetNextToken.TokenString;
+    Tokenizer.Expect(ttkSingleQuote);
+  end
+  else if Tokenizer.NextTokenIsIn([ttkDoubleQuote]) then
+  begin
+    Tokenizer.GetNextToken;
+    while Tokenizer.NextTokenIsIn([ttkDoubleQuote]) do
+      Result += Tokenizer.GetNextToken.TokenString;
+    Tokenizer.Expect(ttkDoubleQuote);
+  end
+  else
+  begin
+    Token := Tokenizer.GetNextToken;
+    raise EInvalidToken.Create(Token.TokenString, token.Kind);
+  end;
+
+end;
+
+function TProtoParser.ParseIdent: TIdentifier;
+// ident = letter { letter | decimalDigit | "_" }
+var
+  Token: TToken;
+
+begin
+  Token := Tokenizer.GetNextToken;
+  if (Token.TokenString <> '') and (Token.TokenString[1] in ['a'..'z', 'A'..'Z']) then
+    Exit(Token.TokenString);
+  raise EInvalidToken.Create(Token.TokenString, Token.Kind);
+end;
+
+function TProtoParser.ParseFullIdent: TFullIdentifier;
+// fullIdent = ident { "." ident }
+begin
+  Result := ParseIdent;
+  while Tokenizer.NextTokenIsIn([ttkDot]) do
+  begin
+    Result += '.';
+    Result += ParseIdent;
+  end;
 
 end;
 
@@ -611,8 +632,43 @@ begin
 
 end;
 
-function TProto3Parser.ParseMessage: TMessage;
+function TProto3Parser.ParseMessage(ResultingProto: TProto): TMessage;
+var
+  Token: TToken;
+
+{
+  message = "message" messageName messageBody
+  messageName = ident
+  messageBody = "{" { field | enum | message | option | oneof | mapField |
+  reserved | emptyStatement } "}"
+}
 begin
+  Result := TMessage.Create;
+  Result.FName := ParseIdent;;
+  Tokenizer.Expect(ttkOpenBrace);
+
+  Token := Tokenizer.GetNextToken;
+
+  while Token.Kind <> ttkCloseBrace do
+  begin
+  if Token.TokenString = 'enum' then
+    ResultingProto.Enums.Add(ParseEnum)
+  else if Token.TokenString = 'message' then
+    Result.Messages.Add(ParseMessage(ResultingProto))
+  else if Token.TokenString = 'option' then
+    Result.Options.Add(ParseOption)
+  else if Token.TokenString = 'oneof' then
+    Result.OneOfs.Add(ParseOneOf)
+  else if Token.TokenString = 'map' then
+    Result.Maps.Add(ParseMap)
+  else if Token.TokenString = 'reserved' then
+    // raise Exception.Create('NIY reserved')
+  else if Token.Kind = ttkSemiColon then
+  else
+    Result.Fields.Add(ParseMessageField(Token));
+  Token := Tokenizer.GetNextToken;
+  end;
+
   {
 FFields := specialize TObjectList<TMessageField>.Create;
 FMessages := specialize TObjectList<TMessage>.Create;
@@ -656,6 +712,73 @@ begin
 
 end;
 
+function TProto3Parser.ParsePackage: AnsiString;
+  // package = "package" fullIdent ";"
+begin
+  Result := ParseFullIdent;
+  Tokenizer.Expect(ttkSemiColon);
+end;
+
+function TProto3Parser.ParseOption: TOption;
+  function ParseOptionName: TOptionName;
+  var
+    Token: TToken;
+
+    // optionName = ( ident | "(" fullIdent ")" ) { "." ident }
+  begin
+    if Tokenizer.NextTokenIsIn([ttkOpenPar]) then
+    begin
+      Tokenizer.Expect(ttkOpenPar);
+      Result := ParseFullIdent;
+      Tokenizer.Expect(ttkClosePar);
+
+    end
+    else
+      Result := ParseIdent;
+
+    while Tokenizer.NextTokenIsIn([ttkDot]) do
+      Result += '.' + ParseIdent;
+  end;
+
+var
+  Token: TToken;
+  OptionName: TOptionName;
+  Value: TConstValue;
+//  option = "option" optionName  "=" constant ";"
+
+begin
+  OptionName := ParseOptionName;
+  Tokenizer.Expect(ttkEqualSign);
+  Value := '';
+  while not Tokenizer.NextTokenIsIn([ttkSemiColon]) do
+    Value += Tokenizer.GetNextToken.TokenString;
+
+  Result := TOption.Create(OptionName, Value);
+  Tokenizer.Expect(ttkSemiColon);
+end;
+
+function TProto3Parser.ParseOneOf: TOneOf;
+begin
+
+end;
+
+function TProto3Parser.ParseMap: TMap;
+begin
+
+end;
+
+function TProto3Parser.ParseMessageField(FirstToken: TToken): TMessageField;
+begin
+
+end;
+
+function TProto3Parser.ParseConstant: TConstant;
+// constant = fullIdent | ( [ "-" | "+" ] intLit ) | ( [ "-" | "+" ] floatLit ) | strLit | boolLit
+begin
+  Result := '';
+  raise ENotImplementedYet.Create('ParseConstant is not Implemented Yet');
+end;
+
 
 constructor TProto3Parser.Create(_Tokenizer: TTokenizer);
 begin
@@ -683,11 +806,11 @@ begin
     if Token.TokenString = 'import' then
       Result.Imports.Add(ParseImport)
     else if Token.TokenString = 'package' then
-      Result.Packages.Add(ParsePackage(Tokenizer))
+      Result.Packages.Add(ParsePackage)
     else if Token.TokenString = 'option' then
-      Result.Options.Add(ParseOption(Tokenizer))
+      Result.Options.Add(ParseOption)
     else if Token.TokenString = 'message' then
-      Result.Messages.Add(ParseMessage)
+      Result.Messages.Add(ParseMessage(Result))
     else if Token.TokenString = 'enum' then
       Result.Enums.Add(ParseEnum)
     else if Token.TokenString = 'service' then
@@ -1351,19 +1474,17 @@ begin
 
 end;
 
-constructor TMessage.Create; //(Tokenizer: TTokenizer);
-var
-  Token: TToken;
-
+constructor TMessage.Create;
 begin
   inherited Create;
-                               {
+
   FFields := specialize TObjectList<TMessageField>.Create;
   FMessages := specialize TObjectList<TMessage>.Create;
   FOptions := specialize TObjectList<TOption>.Create;
   FOneOfs := specialize TObjectList<TOneOf>.Create;
   FMaps := specialize TObjectList<TMap>.Create;
   FEnums := specialize TObjectList<TEnum>.Create;
+  {
 
   Token := Tokenizer.GetNextToken;
   Expect(Token, ttkIdentifier);
@@ -1605,45 +1726,12 @@ end;
 
 { TOption }
 
-constructor TOption.Create; //(Tokenizer: TTokenizer);
-var
-  Token: TToken;
-  // option = "option" optionName  "=" constant ";"
-  // optionName = ( ident | "(" fullIdent ")" ) { "." ident }
-  // constant ::= ident | intLit | floatLit | strLit | boolLit
+constructor TOption.Create(Name: TOptionName; Value: TConstValue);
 begin
-  inherited Create;           {
+  inherited Create;
 
-  Token := Tokenizer.GetNextToken;
-  Expect(Token, [ttkIdentifier]);
-  FOptionName:= Token.TokenString;
-
-  Token := Tokenizer.GetNextToken;
-  while Token.Kind in [ttkDot, ttkIdentifier] do
-  begin
-    FOptionName += Token.TokenString;
-    Token := Tokenizer.GetNextToken;
-  end;
-  Expect(Token, [ttkEqualSign]);
-
-  Token := Tokenizer.GetNextToken;
-  if Token.Kind = ttkNumber then //IntList or FloatLit
-    FConstValue := Token.TokenString
-  else if Token.Kind = ttkSingleQuote then //StrLit
-  begin
-    Token := Tokenizer.GetNextToken;
-    while Token.Kind <> ttkSingleQuote do
-    begin
-      FConstValue += Token.TokenString;
-      Token := Tokenizer.GetNextToken;
-    end;
-    Expect(Token, [ttkSingleQuote]);
-  end
-  else // Ident or boolLit
-    FConstValue:= Token.TokenString;
-
-  Expect(Tokenizer.GetNextToken, [ttkSemiColon]);
-  }
+  FOptionName := Name;
+  FConstValue := Value;
 end;
 
 { TTokenizer }
@@ -1837,9 +1925,8 @@ begin
           CurrentChar := GetNextChar;
         end;
         Result := Self.GetNextToken;
-        Exit;
-      end;
-      if NextCharIs([tckStar]) then
+      end
+      else if NextCharIs([tckStar]) then
       begin
         CurrentChar := GetNextChar;
         Result.TokenString += CurrentChar.Ch;
@@ -1852,9 +1939,10 @@ begin
         end;
         Result.TokenString += GetNextChar.Ch;
         Result.TokenString += GetNextChar.Ch;
+
+        Result := Self.GetNextToken;
       end;
 
-      Result := Self.GetNextToken;
     end
     else
     begin
@@ -1927,6 +2015,48 @@ begin
   if not Result then
     raise EExpectFailed.Create(Format('Expected "%d" Visited "%d".',
       [Token.Kind, TokenKind]));
+end;
+
+function TTokenizer.NextTokenIsIn(Ts: array of TTokenKind): Boolean;
+var
+  CurPos: Integer;
+  Next: TToken;
+  Kind: TTokenKind;
+
+begin
+  CurPos := Current;
+  Next := GetNextToken;
+
+  for Kind in Ts do
+    if Next.Kind = Kind then
+    begin
+      Current := CurPos;
+      Exit(True);
+    end;
+
+  Current := CurPos;
+  Result := False;
+end;
+
+function TTokenizer.NextTokenIsIn(Ts: array of AnsiString): Boolean;
+var
+  CurPos: Integer;
+  Next: TToken;
+  S: AnsiString;
+
+begin
+  CurPos := Current;
+  Next := GetNextToken;
+
+  for S in Ts do
+    if Next.TokenString = S then
+    begin
+      Current := CurPos;
+      Exit(True);
+    end;
+
+  Current := CurPos;
+  Result := False;
 end;
 
 
