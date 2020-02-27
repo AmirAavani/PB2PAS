@@ -59,6 +59,7 @@ type
   TFullIdentifier = AnsiString;
   TOptionName = AnsiString;
   TConstValue = AnsiString;
+  TType = AnsiString;
 
   { TOption }
 
@@ -83,8 +84,6 @@ type
 
     function ToString: AnsiString; override;
   end;
-
-  TType = AnsiString;
 
   { TEnumField }
 
@@ -314,7 +313,9 @@ type
 
     function ParseStrLit: TStrLit;
     function ParseIdent: TIdentifier;
+    function ParseFieldNumber: Integer;
     function ParseFullIdent: TFullIdentifier;
+    function ParseType(CurToken: TToken): TType;
 
     property Tokenizer: TTokenizer read FTokenizer;
   public
@@ -351,14 +352,17 @@ type
   EExpectFailed = class(Exception)
   end;
 
-function ParseType(const TokenString: AnsiString; Tokenizer: TTokenizer): AnsiString;
+function TProtoParser.ParseType(CurToken: TToken): TType;
+ // type = "double" | "float" | "int32" | "int64" | "uint32" | "uint64"
+ //     | "sint32" | "sint64" | "fixed32" | "fixed64" | "sfixed32" | "sfixed64"
+ //     | "bool" | "string" | "bytes" | messageType | enumType
+
 var
   Token: TToken;
   Pos: Integer;
 
 begin
-  {
-  Result := TokenString;
+  Result := CurToken.TokenString;
   Pos := Tokenizer.Current;
   Token := Tokenizer.GetNextToken;
 
@@ -367,7 +371,8 @@ begin
     Result += Token.TokenString;
 
     Token := Tokenizer.GetNextToken;
-    Expect(Token, [ttkIdentifier]);
+    if Token.Kind = ttkIdentifier then
+      raise EInvalidToken.Create(Token.TokenString, ttkIdentifier);
     Result += Token.TokenString;
 
     Pos := Tokenizer.Current;
@@ -375,7 +380,6 @@ begin
   end;
 
   Tokenizer.Current := Pos;
-  }
 end;
 
 { EInvalidToken }
@@ -593,6 +597,68 @@ begin
   raise EInvalidToken.Create(Token.TokenString, Token.Kind);
 end;
 
+function ParseDecimalLit(TokenStr: AnsiString): Integer;
+// decimalLit = ( "1" … "9" ) { decimalDigit }
+begin
+  Result := StrToInt(TokenStr);
+end;
+
+function ParseOctalLit(TokenStr: AnsiString): Integer;
+var
+  c: Char;
+begin
+  Result := 0;
+  for c in Copy(TokenStr, 2, Length(TokenStr)) do
+  begin
+    if not (c in ['0'..'7']) then
+      raise EInvalidToken.Create(TokenStr, ttkNumber);
+    Result *= 8;
+    Result += Ord(c) - 48;
+  end;
+
+end;
+
+function ParseHexLit(TokenStr: AnsiString): Integer;
+var
+  c: Char;
+
+begin
+  Result := 0;
+  for c in Copy(TokenStr, 3, Length(TokenStr)) do
+  begin
+    Result *= 16;
+    if c in ['0'..'9'] then
+      Result += Ord(c) - 48
+    else if UpCase(c) in ['A'..'F'] then
+      Result += Ord(UpCase(c)) - 55
+    else
+      raise EInvalidToken.Create(TokenStr, ttkNumber);
+  end;
+end;
+
+function TProtoParser.ParseFieldNumber: Integer;
+// fieldNumber = intLit;
+// intLit     = decimalLit | octalLit | hexLit
+// octalLit   = "0" { octalDigit }
+// hexLit     = "0" ( "x" | "X" ) hexDigit { hexDigit }
+var
+  Token: TToken;
+  c: Char;
+
+begin
+  Token := Tokenizer.GetNextToken;
+
+  if Token.TokenString[1] in ['1'..'9'] then
+    Result := ParseDecimalLit(Token.TokenString)
+  else if (2 <= Length(Token.TokenString)) and (Token.TokenString[1] = '0') and (UpCase(Token.TokenString[2]) <> Upcase('x')) then
+    Result := ParseOctalLit(Token.TokenString)
+  else if (2 <= Length(Token.TokenString)) and (Token.TokenString[1] = '0') and (UpCase(Token.TokenString[2]) = Upcase('x')) then
+    Result := ParseHexLit(Token.TokenString)
+  else
+    raise EInvalidToken.Create(Token.TokenString, ttkNumber);
+
+end;
+
 function TProtoParser.ParseFullIdent: TFullIdentifier;
 // fullIdent = ident { "." ident }
 begin
@@ -662,7 +728,7 @@ begin
   else if Token.TokenString = 'map' then
     Result.Maps.Add(ParseMap)
   else if Token.TokenString = 'reserved' then
-    // raise Exception.Create('NIY reserved')
+    raise Exception.Create('NIY reserved')
   else if Token.Kind = ttkSemiColon then
   else
     Result.Fields.Add(ParseMessageField(Token));
@@ -768,7 +834,29 @@ begin
 end;
 
 function TProto3Parser.ParseMessageField(FirstToken: TToken): TMessageField;
+// field = [ "repeated" ] type fieldName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
+// fieldOptions = fieldOption { ","  fieldOption }
+// fieldOption = optionName "=" constant
+
+var
+  IsRepeated: Boolean;
+  CurToken: TToken;
+  DataType: AnsiString;
+  FieldName : TIdentifier;
+  FieldNumber: Integer;
+
 begin
+  CurToken := FirstToken;
+  if CurToken.TokenString = 'repeated' then
+  begin
+    IsRepeated := True;
+    CurToken := Tokenizer.GetNextToken;
+
+  end;
+  DataType := ParseType(CurToken);
+  FieldName := ParseIdent;
+  Tokenizer.Expect(ttkEqualSign);
+  FieldNumber := ParseFieldNumber;
 
 end;
 
