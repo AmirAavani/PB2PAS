@@ -1,7 +1,7 @@
 program PB2PAS;
 
-{$mode objfpc}
-
+{$mode objfpc}{$H+}
+{$MODESWITCH ADVANCEDRECORDS}
 uses
   Classes, sysutils, ParameterManagerUnit, PBParserUnit;
 
