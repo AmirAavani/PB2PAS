@@ -4,7 +4,7 @@ program PB2PAS;
 {$MODESWITCH ADVANCEDRECORDS}
 uses
   Classes, sysutils, ParameterManagerUnit, PBParserUnit, StringUnit, UtilsUnit,
-  PBDefinitionUnit, PBCodeGenerator;
+  PBDefinitionUnit, PBCodeGenerator, PBCodeGeneratorUnit;
 
 var
   Files: TStringList;

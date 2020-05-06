@@ -248,14 +248,6 @@ type
     Messages: TMessages;
     Enums: TEnums;
 
-
-    AllClassesNames: TStringList;
-    AllEnumsNames: TStringList;
-
-    procedure PrepareForCodeGeneration;
-    procedure GenerateCode(
-        OutputUnitName: AnsiString; OutputStream: TStream); virtual; abstract;
-
   public
     constructor Create(_Filename: AnsiString; _Syntax: AnsiString; _Imports: TImports; _Packages: TPackages;
         _Options: TOptions; _Messages: TMessages; _Enums: TEnums);
@@ -269,7 +261,7 @@ type
 
   TProto3 = class(TProto)
     procedure GenerateCode(
-        OutputUnitName: AnsiString; OutputStream: TStream); override;
+        OutputUnitName: AnsiString; OutputStream: TStream);
   public
 
   end;
@@ -1231,22 +1223,6 @@ begin
   Enums.Free;
 
   inherited Destroy;
-end;
-
-procedure TProto.PrepareForCodeGeneration;
-var
-  Message: TMessage;
-  Enum: TEnum;
-
-begin
-  AllClassesNames := TStringList.Create;
-  AllEnumsNames := TStringList.Create;
-
-  for Message in Messages do
-    Message.PrepareForCodeGeneration(AllClassesNames, AllEnumsNames);
-
-  for Enum in Enums do
-    Enum.PrepareForCodeGeneration;
 end;
 
 function TProto.ToXML: AnsiString;
