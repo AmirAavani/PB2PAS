@@ -39,7 +39,6 @@ begin
 
   OutputStream.Free;
   Proto.Free;
-
 end;
 
 

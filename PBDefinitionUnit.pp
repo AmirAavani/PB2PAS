@@ -597,7 +597,7 @@ function TEnum.ToXML: AnsiString;
 begin
   Result := Format('<TEnum Name= "%s">', [FName]);
   Result += inherited ToXML;
-   Result += Format('</TEnum>', []);
+  Result += Format('</TEnum>', []);
 end;
 
 { TMessage }
