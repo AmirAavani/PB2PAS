@@ -583,19 +583,6 @@ begin
 
 end;
 
-function GenerateCodeForImports(Imports: TStringList; Output: TMyTextStream): AnsiString;
-var
-  i: Integer;
-
-begin
-  Result := 'uses ' + sLineBreak +
-    '    classes, fgl, sysutils, ProtoHelperUnit, ProtoHelperListsUnit, ProtoStreamUnit';
-  for i := 0 to Imports.Count - 1 do
-    Result += ', ' + GetUnitName(Imports[i]);
-
-   Result += ';';
-end;
-
 { TProtoParser }
 
 function TProtoParser.ParseStrLit: TStrLit;
@@ -823,8 +810,6 @@ begin
   end;
 
   Result := TMessage.Create(Name, Fields, Messages, Options, Enums);
-
-  // WriteLn(Result.ToString);
 end;
 
 function TProto3Parser.ParseEnum: TEnum;
@@ -865,7 +850,8 @@ begin
   end;
 
   Result := TEnum.Create(FName, Options, EnumFields);
-
+  EnumFields.Clear;
+  EnumFields.Free;
 end;
 
 function TProto3Parser.ParseEnumField: TEnumField;
@@ -1110,6 +1096,7 @@ end;
 
 destructor TProto3Parser.Destroy;
 begin
+
   inherited Destroy;
 end;
 

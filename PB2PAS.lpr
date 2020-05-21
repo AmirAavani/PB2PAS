@@ -19,7 +19,6 @@ begin
   begin
     WriteLn(f);
     PBCodeGenerator.GenerateCode(f);
-
   end;
 
   Files.Free;

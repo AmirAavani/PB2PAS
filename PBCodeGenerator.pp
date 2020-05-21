@@ -12,33 +12,28 @@ procedure GenerateCode(InputFilename: AnsiString);
 implementation
 
 uses
-  PBParserUnit, PBDefinitionUnit, UtilsUnit;
+  PBParserUnit, PBDefinitionUnit, PBCodeGeneratorUnit, UtilsUnit;
 
 procedure GenerateCode(InputFilename: AnsiString);
 var
   Proto: TProto;
   Parser: TBaseProtoParser;
-  InputStream: TFileStream;
-  OutputStream: TFileStream;
-  FilePath: AnsiString;
-  OutputUnitName: AnsiString;
+  CodeGenerator: TPBBaseCodeGenerator;
 
 begin
   Parser := TBaseProtoParser.GetParser(InputFilename);
 
-  OutputUnitName := GetUnitName(InputFilename);
   Proto := Parser.ParseProto;
-  WriteLn(Format('<OutputUnitName Name = "%s" />', [OutputUnitName]));
+  WriteLn(Format('<OutputUnitName Name = "%s" />', [Proto.UnitName]));
   WriteLn(Proto.ToXML);
 
-  OutputStream := TFileStream.Create(ConcatPaths([ExtractFileDir(InputFilename),
-    OutputUnitName + '.pp']), fmCreate);
+  CodeGenerator := TPBBaseCodeGenerator.GetCodeGenerator(Proto);
+  CodeGenerator.GenerateCode;
+  CodeGenerator.Free;
 
-  Proto.PrepareForCodeGeneration;
-  Proto.GenerateCode(OutputUnitName, OutputStream);
-
-  OutputStream.Free;
   Proto.Free;
+  Parser.Free;
+
 end;
 
 
