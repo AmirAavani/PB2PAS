@@ -6,7 +6,7 @@ unit PBParserUnit;
 interface
 
 uses
-  PBDefinitionUnit, Classes, SysUtils, fgl, StreamUnit, gvector;
+  PBDefinitionUnit, Classes, SysUtils, fgl, StreamUnit, gvector, ProtoHelperUnit;
 
 type
 
@@ -24,20 +24,22 @@ type
 implementation
 
 uses
-  UtilsUnit, strutils;
+  UtilsUnit, strutils, StringUnit;
 
 type
   TTokenKind = (ttkStart, ttkDot, ttkOpenBrace, ttkCloseBrace, ttkOpenPar,
     ttkClosePar, ttkSemiColon, ttkEqualSign, ttkStar,
     ttkColon, ttkComma, ttkDoubleQuote, ttkSingleQuote,
     ttkMinus, ttkPlus, ttkQuestionMark, ttkLessThan, ttkGreaterThan, ttkOpenBracket,
-      ttkCloseBracket,
-    ttkIdentifier, ttkComment, ttkNumber, ttkSpace, ttkSlash, ttkEndLine, ttkEOF);
+      ttkCloseBracket, ttkAtSgin,
+    ttkIdentifier, ttkComment, ttkNumber, ttkSpace, ttkSlash,
+    ttkEndLine, ttkEOF);
   TCharKind = (tckStart, tckDot, tckOpenBrace, tckCloseBrace, tckOpenPar,
     tckClosePar, tckSemiColon, tckEqualSign, tckStar,
       tckColon, tckComma, tckDoubleQuote, tckSingleQuote,
       tckMinus, tckPlus, tckQuestionMark, tckLessThan, tckGreaterThan, tckOpenBracket,
-      tckCloseBracket,
+      tckCloseBracket, tckAtSgin,
+
       tckLetter, tckDigit,  tckUnderline, tckSpace, tckSlash, tckBackSlash, tckNumberSign,
       tckExclamationMark,
       tckEndLine, tckEoF);
@@ -62,6 +64,9 @@ type
   EInvalidToken = class(Exception)
   public
     constructor Create(TokenStr: AnsiString; TokenKind: TTokenKind);
+
+  end;
+  EParseIntFailed = class(Exception)
 
   end;
 
@@ -132,7 +137,7 @@ type
     function ParseEnum: TEnum;
     function ParseEnumField: TEnumField;
     function ParsePackage: AnsiString;
-    function ParseOption(EndingTokenTypes: array of TTokenKind): TOption;
+    function ParseOption(EndTokenTypes: array of TTokenKind): TOption;
     function MaybeParseOptions: TOptions;
     function ParseOneOf: TOneOf;
     function ParseOneOfField: TOneOfField;
@@ -230,6 +235,7 @@ function TTokenizer.GetNextToken: TToken;
     ']': Result.Kind := tckCloseBracket;
     '#': Result.Kind := tckNumberSign;
     '!': Result.Kind := tckExclamationMark;
+    '@': Result.Kind := tckAtSgin
     else
       WriteLn(Result.ch + ' ' + IntToStr(Ord(Result.Ch)));
       raise EInvalidCharacter.Create(Result.ch, Ord(Result.Ch));
@@ -297,7 +303,7 @@ begin
       tckCloseBrace, tckOpenPar, tckClosePar, tckSemiColon, tckEqualSign,
       tckColon, tckComma, tckDoubleQuote, tckSingleQuote,
       tckMinus, tckQuestionMark, tckLessThan, tckGreaterThan, tckOpenBracket,
-      tckCloseBracket:
+      tckCloseBracket, tckAtSgin:
     begin
       Result.TokenString += CurrentChar.Ch;
       Result.Kind := TTokenKind(Ord(CurrentChar.Kind));
@@ -830,6 +836,7 @@ var
 begin
   Token := Tokenizer.GetNextToken;
   FName := Token.TokenString;
+  WriteLn(FName);
   Options := TOptions.Create;
   EnumFields := TEnumFields.Create;
 
@@ -903,7 +910,7 @@ begin
 end;
 
 
-function TProto3Parser.ParseOption(EndingTokenTypes: array of TTokenKind): TOption;
+function TProto3Parser.ParseOption(EndTokenTypes: array of TTokenKind): TOption;
   function ParseOptionName: TOptionName;
   var
     Token: TToken;
@@ -933,15 +940,9 @@ var
 begin
   OptionName := ParseOptionName;
   Tokenizer.Expect(ttkEqualSign);
-  Value := '';
-  Token := Tokenizer.GetNextToken;
-  while not IsTokenIn(Token, EndingTokenTypes) do
-  begin
-    Value += Token.TokenString;
-    Token := Tokenizer.GetNextToken;
+  Value := ParseConstant;
 
-  end;
-
+  Tokenizer.ExpectOne(EndTokenTypes);
   Result := TOption.Create(OptionName, Value);
 end;
 
@@ -964,8 +965,11 @@ begin
   begin
     Tokenizer.Rewind();
     Result.Add(ParseOption([ttkComma, ttkCloseBracket]));
-    Tokenizer.Rewind;
+
+    Tokenizer.Rewind(1);
     Token := Tokenizer.GetNextToken;
+    if Token.Kind <> ttkCloseBracket then
+      Token := Tokenizer.GetNextToken;
 
   end;
 
@@ -1081,10 +1085,145 @@ begin
 end;
 
 function TProto3Parser.ParseConstant: TConstant;
+  function ParseIntLit: TConstant;
+  // intLit     = decimalLit | octalLit | hexLit
+  // decimalLit = ( "1" … "9" ) { decimalDigit }
+  // octalLit   = "0" { octalDigit }
+  // hexLit     = "0" ( "x" | "X" ) hexDigit { hexDigit }
+  var
+    Token: TToken;
+
+  begin
+    Token := Tokenizer.GetNextToken;
+
+    if IsPrefix('+', Token.TokenString) then
+    if Token.TokenString  = '0' then
+      Exit(Token.TokenString);
+
+    if Token.TokenString[1] in ['1'..'9'] then
+      Exit(Token.TokenString);
+    if (Token.TokenString[1] = '0') and (UpCase(Token.TokenString[2]) = 'X') then
+      Exit(Token.TokenString)
+    else
+    Exit(Token.TokenString);
+
+  end;
+
+  // TODO(Amir): This is not implemented yet.
+  function ParseFloatLit: TConstant;
+  // floatLit = ( decimals "." [ decimals ] [ exponent ] | decimals exponent | "."decimals [ exponent ] ) | "inf" | "nan"
+  // decimals  = decimalDigit { decimalDigit }
+  // exponent  = ( "e" | "E" ) [ "+" | "-" ] decimals
+  var
+    Token: TToken;
+
+  begin
+    Token := Tokenizer.GetNextToken;
+    raise ENotImplementedYet.Create('ParseFloatLit');
+  end;
+
+
+  // TODO(Amir): This needs some work yet.
+  function ParseStringLit: TConstant;
+  // strLit = ( "'" { charValue } "'" ) |  ( '"' { charValue } '"' )
+  //charValue = hexEscape | octEscape | charEscape | /[^\0\n\\]/
+  //hexEscape = '\' ( "x" | "X" ) hexDigit hexDigit
+  //octEscape = '\' octalDigit octalDigit octalDigit
+  //charEscape = '\' ( "a" | "b" | "f" | "n" | "r" | "t" | "v" | '\' | "'" | '"' )
+  // quote = "'" | '"
+  var
+    Token: TToken;
+    Start: TToken;
+
+  begin
+    Start := Tokenizer.GetNextToken;
+    if not (Start.Kind in [ttkSingleQuote, ttkDoubleQuote]) then
+      raise EInvalidToken.Create(Start.TokenString, ttkDoubleQuote);
+
+    Result := Start.TokenString;
+
+    Token := Tokenizer.GetNextToken;
+
+    while Token.Kind <> Start.Kind do
+    begin
+      Result += Token.TokenString;
+      Token := Tokenizer.GetNextToken;
+
+    end;
+    Result += Token.TokenString;
+
+  end;
+
+  function ParseBoolLit: TConstant;
+  // boolLit = "true" | "false"
+  var
+    Token: TToken;
+
+  begin
+    Token := Tokenizer.GetNextToken;
+
+    if (Token.TokenString <> 'true') and (Token.TokenString <> 'false') then
+      raise EInvalidToken.Create(Token.TokenString, Token.Kind);
+
+    Result := Token.TokenString;
+  end;
+
 // constant = fullIdent | ( [ "-" | "+" ] intLit ) | ( [ "-" | "+" ] floatLit ) | strLit | boolLit
+var
+  Token: TToken;
+  Pos: Int64;
+
 begin
   Result := '';
-  raise ENotImplementedYet.Create('ParseConstant is not Implemented Yet');
+
+  Token := Tokenizer.GetNextToken;
+  Tokenizer.Rewind;
+
+  if (Token.TokenString = 'true') or (Token.TokenString = 'false') then
+    Exit(ParseBoolLit);
+  if Token.TokenString[1] in ['a'..'z', 'A'..'Z'] then
+    Exit(ParseFullIdent);
+
+  if IsPrefix('-', Token.TokenString) or IsPrefix('+', Token.TokenString) then
+  begin
+    Pos := Tokenizer.Current;
+    try
+      Result := Token.TokenString + ParseIntLit;
+      Exit;
+    except
+      on e: EParseIntFailed do
+      begin
+
+        e.Free;
+      end;
+    end;
+
+    Result := Token.TokenString + ParseFloatLit;
+    Exit;
+  end;
+
+  if Token.TokenString[1] in ['0'..'9'] then
+  begin
+    Pos := Tokenizer.Current;
+    try
+      Result := ParseIntLit;
+      Exit;
+    except
+      on e: EParseIntFailed do
+      begin
+
+        e.Free;
+      end;
+    end;
+
+    Result := ParseFloatLit;
+    Exit;
+  end;
+
+  if IsPrefix('''', Token.TokenString) or IsPrefix('"', Token.TokenString) then
+    Result := ParseStringLit
+  else
+    Result := ParseBoolLit;
 end;
 
 

@@ -108,12 +108,12 @@ end;
 
 function TSimpleTypeList.LoadFromStream(Stream: TStream): Boolean;
 begin
-
+  raise Exception.Create('NIY');
 end;
 
 procedure TSimpleTypeList.SaveToStream(Stream: TStream);
 begin
-
+  raise Exception.Create('NIY');
 end;
 
 { TObjectList }

@@ -42,21 +42,22 @@ type
   end;
 
   TOptions = specialize TObjectList<TOption>;
-
+  TMessage = class;
 
   { TMessageField }
 
   TMessageField = class(TObject)
   private
+    Parent: TMessage;
     FFieldNumber: Integer;
     FIsRepeated: Boolean;
     FFieldType: TType;
     FName: AnsiString;
     FOptions: TOptions;
 
-    function ApplyPattern(MessageClassName: AnsiString; const Template: AnsiString): AnsiString;
-    procedure GenerateDeclaration(MessageClassName: AnsiString; Output: TMyTextStream);
-    procedure GenerateImplementation(MessageClassName: AnsiString; Output: TMyTextStream);
+    function ApplyPattern(Prefix, MessageClassName: AnsiString; const Template: AnsiString): AnsiString;
+    procedure GenerateDeclaration(Prefix, MessageClassName: AnsiString; Output: TMyTextStream);
+    procedure GenerateImplementation(Prefix, MessageClassName: AnsiString; Output: TMyTextStream);
 
     function GetDefaultValue: AnsiString; virtual;
     procedure GenerateToString(Output: TMyTextStream);
@@ -67,7 +68,7 @@ type
     function GetOptions: TOptions;  virtual;
     // Returns the translation of FieldType to FPC.
     function GetType: AnsiString;  virtual;
-
+    function GetPrefix: AnsiString; virtual;
   public
     property IsRepeated: Boolean read GetIsRepeated;
     property FieldType: TType read GetFieldType;
@@ -151,8 +152,8 @@ type
   private
     OneOfFields: TOneOfFields;
 
-    procedure GenerateDeclaration(Output: TMyTextStream);
   public
+    property Fields: TOneOfFields read OneOfFields;
     constructor Create(_Name: AnsiString; _Fields: TOneOfFields);
     destructor Destroy; override;
 
@@ -402,38 +403,9 @@ end;
 
 { TOneOf }
 
-procedure TOneOf.GenerateDeclaration(Output: TMyTextStream);
-var
-  i: Integer;
-
-begin
-  raise ENotImplementedYet.Create('OneOf');
-  Output.WriteLine(Format('  T%s = Class(TObject)', [FName]));
-  Output.WriteLine('  private');
-
-  for i := 0 to OneOfFields.Count - 1 do
-    Output.WriteLine(Format('    F%s: %s;', [OneOfFields[i].Name, OneOfFields[i].OneOfFieldType]));
-  Output.WriteLine;
-{  for i := 0 to Self.Count - 1 do
-  begin
-    EnumField := Self[i];
-    Stream.WriteStr(Format('%s', [ifthen(i = 0, '(', ', ')]));
-    Stream.WriteStr(Format('%s:%d', [EnumField.Name, EnumField.Value]));
-  end;}
-
-  Output.WriteLine('  public');
-
-  for i := 0 to OneOfFields.Count - 1 do
-    Output.WriteLine(Format('    property %s: %s read F%s write F%s;',
-      [OneOfFields[i].Name, OneOfFields[i].OneOfFieldType, OneOfFields[i].Name, OneOfFields[i].Name]));
-  Output.WriteLine;
-
-  Output.WriteLine('  end;');
-end;
-
 constructor TOneOf.Create(_Name: AnsiString; _Fields: TOneOfFields);
 begin
-  inherited Create(_Name, '', false, -1, TOptions.Create);
+  inherited Create(_Name, _Name, False, -1, TOptions.Create);
 
   OneOfFields := _Fields;
 
@@ -455,8 +427,8 @@ begin
   Result += Format('<OneOf Name = "%s">'#10'%s',
     [Name, Options.ToXML]);
 
-//  for OOField in Self.OneOfFields do
-//    Result += OOField.ToXML;
+  for OOField in Self.OneOfFields do
+    Result += OOField.ToXML;
   Result += Format('</OneOf>'#10, []);
 
 end;
@@ -653,7 +625,7 @@ end;
 
 { TMessageField }
 
-function TMessageField.ApplyPattern(MessageClassName: AnsiString;
+function TMessageField.ApplyPattern(Prefix, MessageClassName: AnsiString;
   const Template: AnsiString): AnsiString;
 begin
   Result := Template;
@@ -662,7 +634,7 @@ begin
   Result := StringReplace(Result, '[[Field.Number]]', IntToStr(Self.FieldNumber), [rfReplaceAll]);
   Result := StringReplace(Result, '[[Field.DefaultValue]]', Self.DefaultValue, [rfReplaceAll]);
   Result := StringReplace(Result, '[[CanName]]', Canonicalize(Self.Name), [rfReplaceAll]);
-  Result := StringReplace(Result, '[[FieldType]]', GetTypeName(Self.FieldType), [rfReplaceAll]);
+  Result := StringReplace(Result, '[[FieldType]]', GetTypeName(Prefix, Self.FieldType), [rfReplaceAll]);
   Result := StringReplace(Result, '[[FormatString]]', FormatString(FieldType), [rfReplaceAll]);
   Result := StringReplace(Result, '[[ClassName]]', MessageClassName, [rfReplaceAll]);
 
@@ -674,37 +646,39 @@ end;
 {$i RepeatedSimpleFieldTemplate.inc}
 
 
-procedure TMessageField.GenerateDeclaration(MessageClassName: AnsiString;
+procedure TMessageField.GenerateDeclaration(Prefix, MessageClassName: AnsiString;
   Output: TMyTextStream);
 begin
   if not IsRepeated and IsSimpleType(FieldType) then
-    Output.WriteLine(ApplyPattern(MessageClassName, DeclareNonRepeatedSimpleFieldTemplate))
+    Output.WriteLine(ApplyPattern(Prefix, MessageClassName, DeclareNonRepeatedSimpleFieldTemplate))
   else if not IsRepeated and not IsSimpleType(FieldType) then
-    Output.WriteLine(ApplyPattern(MessageClassName, DeclareNonRepeatedNonSimpleFieldTemplate))
+    Output.WriteLine(ApplyPattern(Prefix, MessageClassName, DeclareNonRepeatedNonSimpleFieldTemplate))
   else if IsRepeated and not IsSimpleType(FieldType) then
-    Output.WriteLine(ApplyPattern(MessageClassName, DeclareRepeatedNonSimpleFieldTemplate))
+    Output.WriteLine(ApplyPattern(Prefix, MessageClassName, DeclareRepeatedNonSimpleFieldTemplate))
   else
-    Output.WriteLine(ApplyPattern(MessageClassName, DeclareRepeatedSimpleFieldTemplate));
+    Output.WriteLine(ApplyPattern(Prefix, MessageClassName, DeclareRepeatedSimpleFieldTemplate));
 end;
 
-procedure TMessageField.GenerateImplementation(MessageClassName: AnsiString;
+procedure TMessageField.GenerateImplementation(Prefix, MessageClassName: AnsiString;
   Output: TMyTextStream);
 begin
   if not IsRepeated then
   else if not IsSimpleType(FieldType) then
-    Output.WriteLine(ApplyPattern(MessageClassName, ImplementRepeatedNonSimpleFieldTemplate))
-  else if GetTypeName(FieldType) = 'Boolean' then
-    Output.WriteLine(ApplyPattern(MessageClassName, ImplementRepeatedBooleanTemplate))
+    Output.WriteLine(ApplyPattern(Prefix, MessageClassName, ImplementRepeatedNonSimpleFieldTemplate))
+  else if GetTypeName(Prefix, FieldType) = 'Boolean' then
+    Output.WriteLine(ApplyPattern(Prefix, MessageClassName, ImplementRepeatedBooleanTemplate))
   else
-    Output.WriteLine(ApplyPattern(MessageClassName, ImplementRepeatedSimpleFieldTemplate));
+    Output.WriteLine(ApplyPattern(Prefix, MessageClassName, ImplementRepeatedSimpleFieldTemplate));
 end;
 
 function TMessageField.GetDefaultValue: AnsiString;
 begin
+  if FieldType = 'TBytes' then
+    raise ENotImplementedYet.Create('');
   if IsRepeated or not IsSimpleType(FieldType) then
     Exit('');
 
-  case GetTypeName(FieldType) of
+  case GetTypeName('', FieldType) of
     'Double',
     'Single': Exit('0.0');
     'Int16',
@@ -714,10 +688,11 @@ begin
     'UInt32',
     'UInt64': Exit('0');
     'Boolean': Exit('False');
-    'AnsiString': Exit('''''')
+    'AnsiString': Exit('''''');
+    'TBytes': Exit('nil')
     else
        raise Exception.Create(Format('Type %s is not supported yet',
-         [GetTypeName(FieldType)]));
+         [GetTypeName('', FieldType)]));
   end;
 end;
 
@@ -730,7 +705,7 @@ begin
 
   if IsSimpleType(FieldType) and not IsRepeated then
   begin
-    if GetTypeName(FieldType) = 'Boolean' then
+    if GetTypeName('', FieldType) = 'Boolean' then
     begin
       Output.WriteLine(Format(
                        '  if F%s then',
@@ -742,7 +717,7 @@ begin
     end
     else if DefaultValue <> '' then
       Output.WriteLine(
-        ApplyPattern('', ImplementNonRepeatedSimpleFieldToStringTemplate))
+        ApplyPattern('', '', ImplementNonRepeatedSimpleFieldToStringTemplate))
     else
     begin
       Output.WriteLine(Format('  Result += Format(''%s: %%%s '', [F%s]) + sLineBreak;',
@@ -753,13 +728,13 @@ begin
   end
   else  if not IsSimpleType(FieldType) and not IsRepeated then
     Output.WriteLine(
-      ApplyPattern('', ImplementNonRepeatedNonSimpleFieldToStringTemplate))
+      ApplyPattern('', '', ImplementNonRepeatedNonSimpleFieldToStringTemplate))
   else if IsSimpleType(FieldType) and IsRepeated then
     Output.WriteLine(
-      ApplyPattern('', ImplementRepeatedSimpleFieldToStringTemplate))
+      ApplyPattern('', '', ImplementRepeatedSimpleFieldToStringTemplate))
   else if IsSimpleType(FieldType) and IsRepeated then
     Output.WriteLine(
-      ApplyPattern('', ImplementRepeatedNonSimpleFieldToStringTemplate))
+      ApplyPattern('', '', ImplementRepeatedNonSimpleFieldToStringTemplate))
   else if not IsSimpleType(FieldType) and IsRepeated then
   begin
     Output.WriteLine(Format('    if F%s <> nil then', [CanName]));
@@ -807,18 +782,24 @@ end;
 function TMessageField.GetType: AnsiString;
 begin
   if IsSimpleType(FieldType) and not IsRepeated then
-    Result := GetTypeName(FieldType)
+    Result := GetTypeName('', FieldType)
   else if not IsSimpleType(FieldType) and not IsRepeated then
-      Result := Format('%s', [GetTypeName(FieldType)])
+      Result := Format('%s', [GetTypeName('', FieldType)])
   else if IsSimpleType(FieldType) and IsRepeated then
-    Result := Format('specialize TSimpleTypeList<%s>', [GetTypeName(FieldType)])
+    Result := Format('specialize TSimpleTypeList<%s>', [GetTypeName('', FieldType)])
   else
-    Result := Format('specialize TObjectList<%s>', [GetTypeName(FieldType)]);
+    Result := Format('specialize TObjectList<%s>', [GetTypeName('', FieldType)]);
 
 end;
 
-constructor TMessageField.Create(_Name: AnsiString; _FieldType: TType;
-  _IsRepeated: Boolean; _FieldNumber: Integer; _Options: TOptions);
+function TMessageField.GetPrefix: AnsiString;
+begin
+  raise ENotImplementedYet.Create('');
+end;
+
+constructor TMessageField.Create(_Name: AnsiString;
+  _FieldType: TType; _IsRepeated: Boolean; _FieldNumber: Integer;
+  _Options: TOptions);
 begin
   inherited Create;
 

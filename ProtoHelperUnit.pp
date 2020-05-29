@@ -8,6 +8,15 @@ uses
   Classes, SysUtils, fgl, ProtoHelperListsUnit, ProtoStreamUnit;
 
 type
+  TBytes = specialize TSimpleTypeList<Byte>;
+  TSingles = specialize TSimpleTypeList<Single>;
+  TDoubles = specialize TSimpleTypeList<Double>;
+  TInt32s = specialize TSimpleTypeList<Int32>;
+  TInt64s = specialize TSimpleTypeList<Int64>;
+  TUInt32s = specialize TSimpleTypeList<UInt32>;
+  TUInt64s = specialize TSimpleTypeList<UInt64>;
+  TBooleans = specialize TSimpleTypeList<Boolean>;
+
   { TBaseMessage }
 
   TBaseMessage = class(TObject)
@@ -42,47 +51,47 @@ type
     function LoadBoolean(Stream: TProtoStreamReader): Boolean;
 
     procedure SaveRepeatedSingle(Stream: TProtoStreamWriter;
-    const Data: specialize TSimpleTypeList<Single>;
+    const Data: TSingles;
     const TagID: Integer);
     procedure SaveRepeatedDouble(Stream: TProtoStreamWriter;
-        const Data: specialize TSimpleTypeList<Double>;
+        const Data: TDoubles;
         const TagID: Integer);
     procedure SaveRepeatedInt32(Stream: TProtoStreamWriter;
-        const Data: specialize TSimpleTypeList<Int32>;
+        const Data: TInt32s;
         const TagID: Integer);
     procedure SaveRepeatedInt64(Stream: TProtoStreamWriter;
-        const Data: specialize TSimpleTypeList<Int64>;
+        const Data: TInt64s;
         const TagID: Integer);
     procedure SaveRepeatedUInt32(Stream: TProtoStreamWriter;
-        const Data: specialize TSimpleTypeList<UInt32>;
+        const Data: TUInt32s;
         const TagID: Integer);
     procedure SaveRepeatedUInt64(Stream: TProtoStreamWriter;
-        const Data: specialize TSimpleTypeList<UInt64>;
+        const Data: TUInt64s;
         const TagID: Integer);
     procedure SaveRepeatedAnsiString(
         Stream: TProtoStreamWriter;
-       const Data: specialize TSimpleTypeList<AnsiString>;
+       const Data: TStringList;
       const TagID: Integer);
     procedure SaveRepeatedBoolean(Stream: TProtoStreamWriter;
-        const Data: specialize TSimpleTypeList<Boolean>;
+        const Data: TBooleans;
         const TagID: Integer);
 
     function LoadRepeatedSingle(Stream: TProtoStreamReader;
-        Data: specialize TSimpleTypeList<Single>): Boolean;
+        Data: TSingles): Boolean;
     function LoadRepeatedDouble(Stream: TProtoStreamReader;
-        Data: specialize TSimpleTypeList<Double>): Boolean;
+        Data: TDoubles): Boolean;
     function LoadRepeatedInt32(Stream: TProtoStreamReader;
-        Data: specialize TSimpleTypeList<Int32>): Boolean;
+        Data: TInt32s): Boolean;
     function LoadRepeatedInt64(Stream: TProtoStreamReader;
-        Data: specialize TSimpleTypeList<Int64>): Boolean;
+        Data: TInt64s): Boolean;
     function LoadRepeatedUInt32(Stream: TProtoStreamReader;
-        Data: specialize TSimpleTypeList<UInt32>): Boolean;
+        Data: TUInt32s): Boolean;
     function LoadRepeatedUInt64(Stream: TProtoStreamReader;
-        Data: specialize TSimpleTypeList<UInt64>): Boolean;
+        Data: TUInt64s): Boolean;
     function LoadRepeatedAnsiString(Stream: TProtoStreamReader;
-         Data: specialize TSimpleTypeList<AnsiString>): Boolean;
+         Data: TStringList): Boolean;
     function LoadRepeatedBoolean(Stream: TProtoStreamReader;
-        Data: specialize TSimpleTypeList<Boolean>): Boolean;
+        Data: TBooleans): Boolean;
 
     procedure SaveMessage(Stream: TProtoStreamWriter;
         const Data: TBaseMessage;
@@ -107,13 +116,95 @@ type
 
   end;
 
+  { TBaseOneOf }
+
+  TBaseOneOf = class(specialize TFPGList<TObject>)
+  private
+    ObjectIndex: Integer;
+
+    function GetObjectByIndex(Index: Integer): TObject;
+    procedure SetObjectByIndex(Index: Integer; AValue: TObject);
+
+  protected
+    property ObjectByIndex[Index: Integer]: TOBject read GetObjectByIndex write SetObjectByIndex;
+
+  public
+    constructor Create(NumObject: Integer);
+    destructor Destroy; override;
+
+  end;
+
+  { EBaseOneOf }
+
+  EBaseOneOf = class(Exception)
+  public
+    constructor CreateTwoValueAreSet;
+  end;
 
 implementation
+
+{ EBaseOneOf }
+
+constructor EBaseOneOf.CreateTwoValueAreSet;
+begin
+  inherited Create('Two values of an OneOf Field are set!');
+
+end;
+
+{ TBaseOneOf }
+
+function TBaseOneOf.GetObjectByIndex(Index: Integer): TObject;
+begin
+  Result := Self[Index];
+
+end;
+
+procedure TBaseOneOf.SetObjectByIndex(Index: Integer; AValue: TObject);
+begin
+  if ObjectIndex = -1 then
+  begin
+    Self[Index] := AValue;
+    ObjectIndex := Index;
+    Exit;
+
+  end;
+
+  if AValue = nil then
+  begin
+    ObjectIndex := -1;
+    Self[Index] := AValue;
+    Exit;
+
+  end;
+
+  if Index <> ObjectIndex then
+    raise EBaseOneOf.CreateTwoValueAreSet;
+  Self[Index] := AValue;
+end;
+
+constructor TBaseOneOf.Create(NumObject: Integer);
+begin
+  inherited Create;
+
+  Self.Count := NumObject;
+  ObjectIndex := -1;
+end;
+
+destructor TBaseOneOf.Destroy;
+var
+  Obj: TObject;
+
+begin
+  for Obj in Self do
+    Obj.Free;
+
+  inherited Destroy;
+end;
 
 { TBaseMessage }
 
 procedure TBaseMessage.SaveRepeatedAnsiString(Stream: TProtoStreamWriter;
-  const Data: specialize TSimpleTypeList<AnsiString>; const TagID: Integer);
+  const Data: TStringList; const TagID: Integer);
 var
   AnsiStringData: AnsiString;
   i: Integer;
@@ -132,7 +223,7 @@ begin
 end;
 
 procedure TBaseMessage.SaveRepeatedBoolean(Stream: TProtoStreamWriter;
-  const Data: specialize TSimpleTypeList<Boolean>; const TagID: Integer);
+  const Data: TBooleans; const TagID: Integer);
 var
   SingleData: Boolean;
   SizeNode: TLinkListNode;
@@ -151,7 +242,7 @@ begin
 end;
 
 function TBaseMessage.LoadRepeatedSingle(Stream: TProtoStreamReader;
-  Data: specialize TSimpleTypeList<Single>): Boolean;
+  Data: TSingles): Boolean;
 var
   Len: uInt32;
   NewDatum: Single;
@@ -173,7 +264,7 @@ begin
 end;
 
 function TBaseMessage.LoadRepeatedDouble(Stream: TProtoStreamReader;
-  Data: specialize TSimpleTypeList<Double>): Boolean;
+  Data: TDoubles): Boolean;
 var
   Len: uInt32;
   NewDatum: Double;
@@ -194,7 +285,7 @@ begin
 end;
 
 function TBaseMessage.LoadRepeatedInt32(Stream: TProtoStreamReader;
-  Data: specialize TSimpleTypeList<Int32>): Boolean;
+  Data: TInt32s): Boolean;
 var
   Len: uInt32;
   NewDatum: Int32;
@@ -215,7 +306,7 @@ begin
 end;
 
 function TBaseMessage.LoadRepeatedInt64(Stream: TProtoStreamReader;
-  Data: specialize TSimpleTypeList<Int64>): Boolean;
+  Data: TInt64s): Boolean;
 var
   Len: uInt32;
   NewDatum: Int64;
@@ -236,7 +327,7 @@ begin
 end;
 
 function TBaseMessage.LoadRepeatedUInt32(Stream: TProtoStreamReader;
-  Data: specialize TSimpleTypeList<UInt32>): Boolean;
+  Data: TUInt32s): Boolean;
 var
   Len: uInt32;
   NewDatum: UInt32;
@@ -257,7 +348,7 @@ begin
 end;
 
 function TBaseMessage.LoadRepeatedUInt64(Stream: TProtoStreamReader;
-  Data: specialize TSimpleTypeList<UInt64>): Boolean;
+  Data: TUInt64s): Boolean;
 var
   Len: uInt32;
   NewDatum: UInt64;
@@ -278,21 +369,28 @@ begin
 end;
 
 function TBaseMessage.LoadRepeatedAnsiString(Stream: TProtoStreamReader;
-  Data: specialize TSimpleTypeList<AnsiString>): Boolean;
+  Data: TStringList): Boolean;
 var
+  Len: uInt32;
   NewDatum: AnsiString;
+  StartPos: Integer;
 
 begin
-  if Data = nil then
-    Exit;
+  Len := Stream.ReadUInt32;
+  StartPos := Stream.Position;
 
-  NewDatum := Stream.ReadAnsiString;
-  Data.Add(NewDatum);
+  while Stream.Position < StartPos + Len do
+  begin
+    NewDatum := Stream.ReadAnsiString;
+    Data.Add(NewDatum);
 
+  end;
+
+  Result := StartPos + Len = Stream.Position;
 end;
 
 function TBaseMessage.LoadRepeatedBoolean(Stream: TProtoStreamReader;
-  Data: specialize TSimpleTypeList<Boolean>): Boolean;
+  Data: TBooleans): Boolean;
 var
   Len: uInt32;
   NewDatum: Boolean;

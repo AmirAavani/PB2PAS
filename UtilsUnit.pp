@@ -10,7 +10,7 @@ uses
 function Canonicalize(AName: AnsiString): AnsiString;
 function FormatString(const FieldType: AnsiString): AnsiString;
 function GetUnitName(const Filename: AnsiString): AnsiString;
-function GetTypeName(TypeName: AnsiString): AnsiString;
+function GetTypeName(Prefix: AnsiString; TypeName: AnsiString): AnsiString;
 function IsSimpleType(TypeName: AnsiString): Boolean;
 
 type
@@ -77,7 +77,7 @@ begin
   end;
 end;
 
-function GetTypeName(TypeName: AnsiString): AnsiString;
+function GetTypeName(Prefix: AnsiString; TypeName: AnsiString): AnsiString;
 begin
   case TypeName of
     'double': Result := 'Double';
@@ -96,8 +96,13 @@ begin
     'bool': Result := 'Boolean';
     'string': Result := 'AnsiString';
     'byte': Result := 'Byte';
+    'bytes': Result := 'TBytes';
     else
+    begin
       Result := 'T' + Canonicalize(TypeName);
+      if Prefix <> '' then
+        Result := Prefix + '.T' + Canonicalize(TypeName);
+    end;
   end;
 
 end;
