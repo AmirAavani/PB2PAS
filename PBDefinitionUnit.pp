@@ -67,11 +67,12 @@ type
     function GetName: AnsiString; virtual;
     function GetOptions: TOptions;  virtual;
     // Returns the translation of FieldType to FPC.
-    function GetType: AnsiString;  virtual;
+    function GetFPCType: AnsiString;  virtual;
     function GetPrefix: AnsiString; virtual;
   public
     property IsRepeated: Boolean read GetIsRepeated;
     property FieldType: TType read GetFieldType;
+    property FPCType: AnsiString read GetFPCType;
     property Name: AnsiString read GetName;
     property FieldNumber: Integer read GetFieldNumber;
     property Options: TOptions read GetOptions;
@@ -133,10 +134,12 @@ type
     FName: AnsiString;
     FOptions: specialize TObjectList<TOption>;
     FFieldNumber: Integer;
+    function GetFPCType: AnsiString;
   public
     property OneOfFieldType: TType read FOneOfFieldType;
     property Name: AnsiString read FName;
     property FieldNumber: Integer read FFieldNumber;
+    property FPCType: AnsiString read GetFPCType;
 
     constructor Create(_Name: AnsiString; _OneOfFieldType: TType;
           _FieldNumber: Integer; _Options: TOptions);
@@ -172,7 +175,7 @@ type
     function GetDefaultValue: AnsiString; override;
     function GetFieldType: TType; override;
     // Returns the translation of FieldType to FPC.
-    function GetType: AnsiString; override;
+    function GetFPCType: AnsiString; override;
 
   public
     property KeyType: TType read FKeyType;
@@ -200,14 +203,15 @@ type
 
     MessageClassName: AnsiString;
 
+    function GetFPCType: AnsiString;
     procedure PrepareForCodeGeneration(AllClassesNames, AllEnumsNames: TStringList);
-    function HasRepeatedHasNonSimple: Boolean;
   public
     property Name: AnsiString read FName;
     property Fields: TMessageFields read FFields;
     property Messages: specialize TObjectList<TMessage> read FMessages;
     property Options: TOptions read FOptions;
     property Enums: TEnums read FEnums;
+    property FPCType: AnsiString read GetFPCType;
 
     constructor Create(_Name: AnsiString;
       _Fields: TMessageFields;
@@ -374,10 +378,10 @@ begin
 
 end;
 
-function TMap.GetType: AnsiString;
+function TMap.GetFPCType: AnsiString;
 begin
-  WriteLn('raise ENotImplementedYet.Create(TMap.GetType)');
-  Result:= inherited GetType;
+  Result:= Format('T%s2%sMap', [KeyType, ValueType]);
+
 end;
 
 constructor TMap.Create(_Name: AnsiString; _FieldNumber: Integer; _KeyType,
@@ -434,6 +438,11 @@ begin
 end;
 
 { TOneOfField }
+
+function TOneOfField.GetFPCType: AnsiString;
+begin
+  Result := GetNonRepeatedType4FPC(OneOfFieldType);
+end;
 
 constructor TOneOfField.Create(_Name: AnsiString; _OneOfFieldType: TType;
   _FieldNumber: Integer; _Options: TOptions);
@@ -550,7 +559,8 @@ end;
 
 function TEnum.ToXML: AnsiString;
 begin
-  Result := Format('<TEnum Name= "%s">', [FName]);
+  Result := Format('<TEnum Name= "%s">%s',
+    [FName, FOptions.ToXML]);
   Result += inherited ToXML;
   Result += Format('</TEnum>', []);
 end;
@@ -574,19 +584,12 @@ begin
   FFields.Sort(@CompareMessageFields);
 end;
 
-
-function TMessage.HasRepeatedHasNonSimple: Boolean;
-var
-  Field: TMessageField;
-
+function TMessage.GetFPCType: AnsiString;
 begin
-  Result := False;
-
-  for Field in Fields do
-    if Field.IsRepeated and not IsSimpleType(Field.FieldType) then
-      Exit(True);
+  Result := 'T' + Canonicalize(Name);
 
 end;
+
 
 constructor TMessage.Create(_Name: AnsiString;
       _Fields: TMessageFields;
@@ -634,7 +637,7 @@ begin
   Result := StringReplace(Result, '[[Field.Number]]', IntToStr(Self.FieldNumber), [rfReplaceAll]);
   Result := StringReplace(Result, '[[Field.DefaultValue]]', Self.DefaultValue, [rfReplaceAll]);
   Result := StringReplace(Result, '[[CanName]]', Canonicalize(Self.Name), [rfReplaceAll]);
-  Result := StringReplace(Result, '[[FieldType]]', GetTypeName(Prefix, Self.FieldType), [rfReplaceAll]);
+  Result := StringReplace(Result, '[[FieldType]]', GetFPCType, [rfReplaceAll]);
   Result := StringReplace(Result, '[[FormatString]]', FormatString(FieldType), [rfReplaceAll]);
   Result := StringReplace(Result, '[[ClassName]]', MessageClassName, [rfReplaceAll]);
 
@@ -665,7 +668,7 @@ begin
   if not IsRepeated then
   else if not IsSimpleType(FieldType) then
     Output.WriteLine(ApplyPattern(Prefix, MessageClassName, ImplementRepeatedNonSimpleFieldTemplate))
-  else if GetTypeName(Prefix, FieldType) = 'Boolean' then
+  else if GetFPCType = 'Boolean' then
     Output.WriteLine(ApplyPattern(Prefix, MessageClassName, ImplementRepeatedBooleanTemplate))
   else
     Output.WriteLine(ApplyPattern(Prefix, MessageClassName, ImplementRepeatedSimpleFieldTemplate));
@@ -673,14 +676,13 @@ end;
 
 function TMessageField.GetDefaultValue: AnsiString;
 begin
-  if FieldType = 'TBytes' then
-    raise ENotImplementedYet.Create('');
   if IsRepeated or not IsSimpleType(FieldType) then
-    Exit('');
+    Exit('nil');
 
-  case GetTypeName('', FieldType) of
+  case GetFPCType of
     'Double',
     'Single': Exit('0.0');
+    'Byte',
     'Int16',
     'Int32',
     'Int64',
@@ -689,10 +691,9 @@ begin
     'UInt64': Exit('0');
     'Boolean': Exit('False');
     'AnsiString': Exit('''''');
-    'TBytes': Exit('nil')
     else
        raise Exception.Create(Format('Type %s is not supported yet',
-         [GetTypeName('', FieldType)]));
+         [GetFPCType]));
   end;
 end;
 
@@ -705,7 +706,7 @@ begin
 
   if IsSimpleType(FieldType) and not IsRepeated then
   begin
-    if GetTypeName('', FieldType) = 'Boolean' then
+    if GetFPCType = 'Boolean' then
     begin
       Output.WriteLine(Format(
                        '  if F%s then',
@@ -779,16 +780,17 @@ begin
 
 end;
 
-function TMessageField.GetType: AnsiString;
+function TMessageField.GetFPCType: AnsiString;
 begin
-  if IsSimpleType(FieldType) and not IsRepeated then
-    Result := GetTypeName('', FieldType)
-  else if not IsSimpleType(FieldType) and not IsRepeated then
-      Result := Format('%s', [GetTypeName('', FieldType)])
-  else if IsSimpleType(FieldType) and IsRepeated then
-    Result := Format('specialize TSimpleTypeList<%s>', [GetTypeName('', FieldType)])
+  if IsRepeated then
+  begin
+    if IsSimpleType(FieldType) then
+      Result := 'T' + GetNonRepeatedType4FPC(FieldType) + 's'
+    else
+      Result := GetNonRepeatedType4FPC(FieldType) + 's';
+  end
   else
-    Result := Format('specialize TObjectList<%s>', [GetTypeName('', FieldType)]);
+    Result := GetNonRepeatedType4FPC(FieldType);
 
 end;
 

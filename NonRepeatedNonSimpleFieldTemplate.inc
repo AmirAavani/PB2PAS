@@ -2,9 +2,9 @@ const
  DeclareNonRepeatedNonSimpleFieldTemplate : AnsiString =
  '  // Declarations for [[Field.Type]] [[Field.Name]] = [[Field.Number]];' + sLineBreak +
  '  private' + sLineBreak +
- '    F[[CanName]]: [[FieldType]];' + sLineBreak +
+ '    F[[CanName]]: [[Field.FPCType]];' + sLineBreak +
  '  public' + sLineBreak +
- '    property [[CanName]]: [[FieldType]] read F[[CanName]] write F[[CanName]];' + sLineBreak;
+ '    property [[CanName]]: [[Field.FPCType]] read F[[CanName]] write F[[CanName]];' + sLineBreak;
  ImplementNonRepeatedNonSimpleFieldToStringTemplate : AnsiString =
   '  if F[[CanName]] <> nil then' + sLineBreak +
   '  begin' + sLineBreak +

@@ -10,7 +10,7 @@ uses
 function Canonicalize(AName: AnsiString): AnsiString;
 function FormatString(const FieldType: AnsiString): AnsiString;
 function GetUnitName(const Filename: AnsiString): AnsiString;
-function GetTypeName(Prefix: AnsiString; TypeName: AnsiString): AnsiString;
+function GetNonRepeatedType4FPC(TypeName: AnsiString): AnsiString;
 function IsSimpleType(TypeName: AnsiString): Boolean;
 
 type
@@ -51,6 +51,31 @@ begin
 
 end;
 
+function GetNonRepeatedType4FPC(TypeName: AnsiString): AnsiString;
+begin
+  case TypeName of
+    'double': Result := 'Double';
+    'float': Result := 'Single';
+    'int16': Result := 'Int16';
+    'sint16': Result := 'Int16';
+    'int32': Result := 'Int32';
+    'sint32': Result := 'Int32';
+    'fixed32': Result := 'Int32';
+    'int64': Result := 'Int64';
+    'sint64': Result := 'Int64';
+    'fixed64': Result := 'Int64';
+    'uint16': Result := 'UInt16';
+    'uint32': Result := 'UInt32';
+    'uint64': Result := 'UInt64';
+    'bool': Result := 'Boolean';
+    'string': Result := 'AnsiString';
+    'byte': Result := 'Byte';
+    'bytes': Result := 'Byte';
+    else
+      Result := 'T' + Canonicalize(TypeName);
+  end;
+end;
+
 function IsSimpleType(TypeName: AnsiString): Boolean;
 begin
   Result := True;
@@ -75,36 +100,6 @@ begin
     else
       Result := False;
   end;
-end;
-
-function GetTypeName(Prefix: AnsiString; TypeName: AnsiString): AnsiString;
-begin
-  case TypeName of
-    'double': Result := 'Double';
-    'float': Result := 'Single';
-    'int16': Result := 'Int16';
-    'sint16': Result := 'Int16';
-    'int32': Result := 'Int32';
-    'sint32': Result := 'Int32';
-    'fixed32': Result := 'Int32';
-    'int64': Result := 'Int64';
-    'sint64': Result := 'Int64';
-    'fixed64': Result := 'Int64';
-    'uint16': Result := 'UInt16';
-    'uint32': Result := 'UInt32';
-    'uint64': Result := 'UInt64';
-    'bool': Result := 'Boolean';
-    'string': Result := 'AnsiString';
-    'byte': Result := 'Byte';
-    'bytes': Result := 'TBytes';
-    else
-    begin
-      Result := 'T' + Canonicalize(TypeName);
-      if Prefix <> '' then
-        Result := Prefix + '.T' + Canonicalize(TypeName);
-    end;
-  end;
-
 end;
 
 function GetTypeSize(TypeName: AnsiString): Integer;

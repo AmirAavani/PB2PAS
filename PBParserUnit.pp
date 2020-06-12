@@ -235,7 +235,8 @@ function TTokenizer.GetNextToken: TToken;
     ']': Result.Kind := tckCloseBracket;
     '#': Result.Kind := tckNumberSign;
     '!': Result.Kind := tckExclamationMark;
-    '@': Result.Kind := tckAtSgin
+    '@': Result.Kind := tckAtSgin;
+    '+': Result.Kind := tckPlus
     else
       WriteLn(Result.ch + ' ' + IntToStr(Ord(Result.Ch)));
       raise EInvalidCharacter.Create(Result.ch, Ord(Result.Ch));
@@ -836,7 +837,6 @@ var
 begin
   Token := Tokenizer.GetNextToken;
   FName := Token.TokenString;
-  WriteLn(FName);
   Options := TOptions.Create;
   EnumFields := TEnumFields.Create;
 

@@ -160,11 +160,12 @@ end;
 
 function TUnitCode.TImplementation.ToString: AnsiString;
 begin
-  Result :=  'implementation'+ LineEnding;
+  Result :=  'implementation'+ sLineBreak + sLineBreak;
 
   if Self.UsesList.Count <> 0 then
     WriteLineStr(Format('uses %s;', [JoinStrings(Self.UsesList, ',')]), Result);
 
+  WriteLineStr(Format('%s', [JoinStrings(Self.Methods, sLineBreak)]), Result);
 end;
 
 { TUnitCode }
@@ -256,6 +257,11 @@ end;
 procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
   out Unitcode: TUnitCode; const Prefix, Indent: AnsiString);
 
+  function GetMessageClassName: AnsiString;
+  begin
+    Result := Format('%sT%s', [Prefix, Canonicalize(aMessage.Name)]);
+  end;
+
   procedure GenerateDeclarationForMessage(
     const aMessage: TMessage; out Unitcode: TUnitCode);
   var
@@ -288,6 +294,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       begin
         GenerateCodeForOneOf(Field as TOneOf, Unitcode, Prefix, Indent);
         HasOneOf := True;
+        Break;
+
       end;
     if HasOneOf then
       Unitcode.InterfaceCode.TypeList.Add('');
@@ -302,27 +310,26 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
     Unitcode.InterfaceCode.TypeList.Add('%spublic', [Indent]);
     for Field in aMessage.Fields do
       GenerateCodeForMessageField(Field, MessageClassName, Unitcode, Prefix, Indent + '  ');
-    {
 
-    Output.WriteLine('  protected ');
-    Output.WriteLine('    procedure SaveToStream(Stream: TProtoStreamWriter); override;');
-    Output.WriteLine('    function LoadFromStream(Stream: TProtoStreamReader; Len: Integer): Boolean; override;');
-    Output.WriteLine;
-    Output.WriteLine('  public ');
-    Output.WriteLine('    constructor Create;');
-    if Fields.Count <> 0 then
+    Unitcode.InterfaceCode.TypeList.Add(Format('%sprotected ', [Indent]));
+    Unitcode.InterfaceCode.TypeList.Add(Format('%s  procedure SaveToStream(Stream: TProtoStreamWriter); override;',
+      [Indent]));
+    Unitcode.InterfaceCode.TypeList.Add(Format('%s  function LoadFromStream(Stream: TProtoStreamReader; Len: Integer): Boolean; override;',
+    [Indent]));
+    Unitcode.InterfaceCode.TypeList.Add('');
+    Unitcode.InterfaceCode.TypeList.Add('%spublic', [Indent]);
+    Unitcode.InterfaceCode.TypeList.Add(Format('%s  constructor Create;', [Indent]));
+    if aMessage.Fields.Count <> 0 then
     begin
-      S := '    constructor Create(';
-      for Field in Fields do
+      S := Format('%sconstructor Create(', [Indent]);
+      for Field in aMessage.Fields do
         S += Format('a%s: %s; ', [Canonicalize(Field.Name),
-          Field.GetType]);
+          Field.FPCType]);
       S[Length(S) - 1] := ')';
       S[Length(S)] := ';';
-      Output.WriteLine(S);
-
+      Unitcode.InterfaceCode.TypeList.Add(S);
     end;
 
-    }
     Unitcode.InterfaceCode.TypeList.Add(Format('%sdestructor Destroy; override;', [Indent + '  ']));
     Unitcode.InterfaceCode.TypeList.Add(Format('%sfunction ToString: AnsiString; override;', [Indent + '  ']));
     Unitcode.InterfaceCode.TypeList.Add('');
@@ -332,278 +339,279 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
   end;
 
   procedure GenerateImplementationForMessage(const aMessage: TMessage; out Unitcode: TUnitCode);
-  {
-      procedure GenerateConstructors;
-      var
-        Field: TMessageField;
-        CanName: AnsiString;
-        CreateDeclaration: AnsiString;
 
-      begin
-        Output.WriteLine(Format('constructor %s.Create;', [MessageClassName]));
-        Output.WriteLine('begin');
-        Output.WriteLine(Format('  inherited Create;', []));
-        Output.WriteLine;
-
-        for Field in Fields do
-        begin
-          CanName := Canonicalize(Field.Name);
-          if Field.DefaultValue <> '' then
-            Output.WriteLine(Format('  F%s := %s;', [CanName, Field.DefaultValue]));
-        end;
-
-        Output.WriteLine('end;' + sLineBreak);
-
-        if Fields.Count <> 0 then
-        begin
-          CreateDeclaration := 'Create(';
-          for Field in Fields do
-            CreateDeclaration += Format('a%s: %s; ', [Canonicalize(Field.Name),
-              Field.GetType]);
-          CreateDeclaration[Length(CreateDeclaration) - 1] := ')';
-          CreateDeclaration[Length(CreateDeclaration)] := ';';
-          Output.WriteLine(Format('constructor %s.%s',
-            [MessageClassName, CreateDeclaration]));
-          Output.WriteLine('begin');
-          Output.WriteLine(Format('  inherited Create;', []));
-          Output.WriteLine;
-          for Field in Fields do
-            Output.WriteLine(Format('  F%s := a%s; ', [Canonicalize(Field.Name),
-                Canonicalize(Field.Name)]));
-
-          Output.WriteLine(sLineBreak + 'end;');
-        end;
-
-      end;
-
-      procedure GenerateDestructor;
-      var
-        Field: TMessageField;
-        CanName: AnsiString;
-
-      begin
-        Output.WriteLine(Format('destructor %s.Destroy;', [MessageClassName]));
-        Output.WriteLine('begin');
-        for Field in FFields do
-        begin
-          CanName := Canonicalize(Field.Name);
-          if not IsSimpleType(Field.FieldType) or Field.IsRepeated then
-            Output.WriteLine(Format('  F%s.Free;', [CanName]));
-        end;
-        Output.WriteLine;
-        Output.WriteLine('  inherited;');
-        Output.WriteLine('end;');
-
-
-      end;
-
-      procedure GenerateToString;
-
-      var
-        Field: TMessageField;
-        CanName: AnsiString;
-
-      begin
-        Output.WriteLine(Format('function %s.ToString: AnsiString;', [MessageClassName]));
-        if HasRepeatedHasNonSimple then
-        begin
-          Output.WriteLine('var');
-          Output.WriteLine('  BaseMessage: TBaseMessage;');
-          Output.WriteLine;
-        end;
-
-        Output.WriteLine('begin');
-        Output.WriteLine('  Result := '''';');
-        Output.WriteLine;
-
-        for Field in FFields do
-          Field.GenerateToString(Output);
-        Output.WriteLine;
-        Output.WriteLine('end;');
-
-      end;
-
-      procedure GenerateSaveToStream;
-      var
-        Field: TMessageField;
-        CanName: AnsiString;
-        FieldType: AnsiString;
-
-      begin
-        Output.WriteLine(Format('procedure %s.SaveToStream(Stream: TProtoStreamWriter);', [MessageClassName]));
-        if HasRepeatedHasNonSimple then
-        begin
-          Output.WriteLine('var');
-          Output.WriteLine('  SizeNode: TLinkListNode;');
-          Output.WriteLine('  BaseMessage: TBaseMessage;');
-          Output.WriteLine;
-        end;
-
-        Output.WriteLine('begin');
-
-        for Field in Fields do
-        begin
-          CanName := Canonicalize(Field.Name);
-          FieldType :=  GetTypeName(Field.FieldType);
-
-          if IsSimpleType(Field.FieldType) and not Field.IsRepeated then
-          begin
-            Output.WriteLine(Format('  Save%s(Stream, F%s, %d);',
-              [FieldType, CanName, Field.FieldNumber]));
-          end
-          else if IsSimpleType(Field.FieldType) and Field.IsRepeated then
-          begin
-            CanName := Canonicalize(Field.Name);
-            FieldType :=  GetTypeName(Field.FieldType);
-
-            case GetTypeName(Field.FieldType) of
-            'AnsiString', 'Single', 'Double', 'Int32', 'Int64', 'UInt32', 'UInt64', 'Boolean':
-              Output.WriteLine(Format('  SaveRepeated%s(Stream, F%s, %d);',
-                [FieldType, CanName, Field.FieldNumber]))
-            else
-               raise Exception.Create(Format('Type %s is not supported yet',
-                   [GetTypeName(Field.FieldType)]));
-            end;
-          end
-          else if not IsSimpleType(Field.FieldType) and not Field.IsRepeated then
-          begin
-            Output.WriteLine(Format('  SaveMessage(Stream, F%s, %d);',
-              [CanName, Field.FieldNumber]));
-          end
-          else if not IsSimpleType(Field.FieldType) and Field.IsRepeated then
-          begin
-            Output.WriteLine(Format('  if F%s <> nil then', [CanName]));
-            Output.WriteLine(Format('    for BaseMessage in F%s do', [CanName]));
-            Output.WriteLine(Format('      SaveMessage(Stream, BaseMessage, %d);',
-                             [Field.FieldNumber]));
-            Output.WriteLine;
-          end;
-
-          Output.WriteLine;
-        end;
-
-        Output.WriteLine('end;');
-        Output.WriteLine;
-
-      end;
-
-      procedure GenerateLoadFromStream;
-      var
-        Field: TMessageField;
-        CanName: AnsiString;
-        FieldType: AnsiString;
-
-      begin
-        Output.WriteLine(Format('function %s.LoadFromStream(Stream: TProtoStreamReader; Len: Integer): Boolean;', [MessageClassName]));
-        Output.WriteLine('var');
-        Output.WriteLine('  StartPos, FieldNumber, WireType: Integer;'+ sLineBreak);
-        if HasRepeatedHasNonSimple then
-        begin
-          Output.WriteLine('  BaseMessage: TBaseMessage;');
-          Output.WriteLine;
-        end;
-
-        Output.WriteLine('begin');
-        Output.WriteLine('  StartPos := Stream.Position;');
-        Output.WriteLine('  while Stream.Position < StartPos + Len do');
-        Output.WriteLine('  begin');
-        Output.WriteLine('    Stream.ReadTag(FieldNumber, WireType);');
-
-        Output.WriteLine;
-        Output.WriteLine('    case FieldNumber of');
-
-        for Field in Fields do
-        begin
-          CanName := Canonicalize(Field.Name);
-          FieldType :=  GetTypeName(Field.FieldType);
-
-
-          if IsSimpleType(Field.FieldType) and not Field.IsRepeated then
-          begin
-            Output.WriteLine(Format('    %d: F%s := Load%s(Stream);' + sLineBreak,
-              [Field.FieldNumber, CanName, FieldType]));
-          end
-          else if IsSimpleType(Field.FieldType) and Field.IsRepeated then
-          begin
-            CanName := Canonicalize(Field.Name);
-            FieldType :=  GetTypeName(Field.FieldType);
-
-            case GetTypeName(Field.FieldType) of
-            'AnsiString', 'Single', 'Double', 'Int32', 'Int64', 'UInt32', 'UInt64', 'Boolean':
-            begin
-              Output.WriteLine(Format('    %d:', [Field.FieldNumber]));
-              Output.WriteLine       ('    begin' + sLineBreak);
-              Output.WriteLine       ('      if WireType <> 2 then' + sLineBreak +
-                                      '        Exit(False);');
-              Output.WriteLine(Format('      LoadRepeated%s(Stream, GetOrCreateAll%s);',
-                   [FieldType, CanName]));
-              Output.WriteLine       ('    end;' + sLineBreak);
-            end
-            else
-               raise Exception.Create(Format('Type %s is not supported yet',
-                   [GetTypeName(Field.FieldType)]));
-            end;
-          end
-          else if not IsSimpleType(Field.FieldType) and not Field.IsRepeated then
-          begin
-            Output.WriteLine(Format('    %d:', [Field.FieldNumber]));
-            Output.WriteLine       ('    begin');
-            Output.WriteLine       ('      if WireType <> 2 then' + sLineBreak +
-                                    '        Exit(False);');
-            Output.WriteLine(Format('      F%s := %s.Create;', [CanName, FieldType]));
-            Output.WriteLine(Format('      if not LoadMessage(Stream, F%s) then' + sLineBreak +
-                                    '        Exit(False);', [CanName]));
-            Output.WriteLine       ('    end;' + sLineBreak);
-          end
-          else if not IsSimpleType(Field.FieldType) and Field.IsRepeated then
-          begin
-            Output.WriteLine(Format('    %d:', [Field.FieldNumber]));
-            Output.WriteLine       ('    begin');
-            Output.WriteLine       ('      if WireType <> 2 then' + sLineBreak +
-                                    '        Exit(False);');
-            Output.WriteLine(Format('      GetOrCreateAll%s.Add(%s.Create);', [CanName, FieldType]));
-            Output.WriteLine(Format('      if not LoadMessage(Stream, F%s.Last) then' + sLineBreak +
-                                    '        Exit(False);', [CanName]));
-            Output.WriteLine       ('    end;' + sLineBreak);
-            Output.WriteLine;
-          end;
-
-          Output.WriteLine;
-        end;
-        Output.WriteLine('    end;');
-        Output.WriteLine('  end;' + sLineBreak);
-
-        Output.WriteLine('  Result := StartPos + Len = Stream.Position;');
-        Output.WriteLine('end;');
-
-      end;
-
-
+    procedure GenerateConstructors;
     var
       Field: TMessageField;
-  }
-    begin
-   {   for Field in Fields do
-        Field.GenerateImplementation(MessageClassName, Output);
-      GenerateConstructors;
-      Output.WriteLine;
-      GenerateDestructor;
-      Output.WriteLine;
-      GenerateToString;
-      Output.WriteLine;
-      GenerateSaveToStream;
-      GenerateLoadFromStream;
+      CanName: AnsiString;
+      CreateDeclaration: AnsiString;
+      MessageClassName: AnsiString;
 
-      {
-      Output.WriteLine;
+    begin
+      MessageClassName := Format('%sT%s', [Prefix, Canonicalize(aMessage.Name)]);
+
+      Unitcode.ImplementationCode.Methods.Add(Format('constructor %s.Create;', [MessageClassName]));
+      Unitcode.ImplementationCode.Methods.Add('begin');
+      Unitcode.ImplementationCode.Methods.Add('  inherited Create;');
+      Unitcode.ImplementationCode.Methods.Add(sLineBreak);
+      Unitcode.ImplementationCode.Methods.Add(sLineBreak);
+
+      for Field in aMessage.Fields do
+      begin
+        CanName := Canonicalize(Field.Name);
+        if Field.DefaultValue <> '' then
+          Unitcode.ImplementationCode.Methods.Add(Format('  F%s := %s;', [CanName, Field.DefaultValue]));
+      end;
+
+      Unitcode.ImplementationCode.Methods.Add(sLineBreak + 'end;' + sLineBreak);
+
+      if aMessage.Fields.Count <> 0 then
+      begin
+        CreateDeclaration := 'Create(';
+        for Field in aMessage.Fields do
+          CreateDeclaration += Format('a%s: %s; ', [Canonicalize(Field.Name),
+            Field.FPCType]);
+        CreateDeclaration[Length(CreateDeclaration) - 1] := ')';
+        CreateDeclaration[Length(CreateDeclaration)] := ';';
+        Unitcode.ImplementationCode.Methods.Add(Format('constructor %s.%s',
+          [MessageClassName, CreateDeclaration]));
+        Unitcode.ImplementationCode.Methods.Add('begin');
+        Unitcode.ImplementationCode.Methods.Add(Format('  inherited Create;', []));
+        Unitcode.ImplementationCode.Methods.Add('');
+        for Field in aMessage.Fields do
+          Unitcode.ImplementationCode.Methods.Add(Format('  F%s := a%s; ', [Canonicalize(Field.Name),
+              Canonicalize(Field.Name)]));
+
+        Unitcode.ImplementationCode.Methods.Add(sLineBreak + 'end;');
+      end;
+
+    end;
+
+    procedure GenerateDestructor;
+    var
+      Field: TMessageField;
+      CanName: AnsiString;
+      MessageClassName: AnsiString;
+
+    begin
+      MessageClassName := Format('%sT%s', [Prefix, Canonicalize(aMessage.Name)]);
+      Unitcode.ImplementationCode.Methods.Add(Format('destructor %s.Destroy;', [MessageClassName]));
+      Unitcode.ImplementationCode.Methods.Add('begin');
+      for Field in aMessage.Fields do
+      begin
+        CanName := Canonicalize(Field.Name);
+        if not IsSimpleType(Field.FieldType) or Field.IsRepeated then
+          Unitcode.ImplementationCode.Methods.Add(Format('  F%s.Free;', [CanName]));
+      end;
+      Unitcode.ImplementationCode.Methods.Add('');
+      Unitcode.ImplementationCode.Methods.Add('  inherited;');
+      Unitcode.ImplementationCode.Methods.Add('end;');
+
+
+    end;
+
+    function MessageHasRepeatedNonSimple: Boolean;
+    var
+      Field: TMessageField;
+
+    begin
+      Result := False;
+
+      for Field in aMessage.Fields do
+        if Field.IsRepeated and not IsSimpleType(Field.FieldType) then
+          Exit(True);
+
+    end;
+
+    procedure GenerateToString;
+    var
+      Field: TMessageField;
+
+    begin
+      Unitcode.ImplementationCode.Methods.Add(Format('function %s.ToString: AnsiString;', [GetMessageClassName]));
+      Unitcode.ImplementationCode.Methods.Add('begin');
+      Unitcode.ImplementationCode.Methods.Add('  Result := '''';');
+      Unitcode.ImplementationCode.Methods.Add('');
+
+      for Field in aMessage.Fields do
+        if Field.FPCType <> 'AnsiString' then
+          Unitcode.ImplementationCode.Methods.Add(Format('  Result += F%s.ToString;' + sLineBreak,
+              [Canonicalize(Field.Name)]))
+        else
+          Unitcode.ImplementationCode.Methods.Add(Format('  Result += F%s;' + sLineBreak,
+              [Canonicalize(Field.Name)]));
+
+      Unitcode.ImplementationCode.Methods.Add('');
+      Unitcode.ImplementationCode.Methods.Add('end;');
+
+    end;
+
+    procedure GenerateSaveToStream;
+    var
+      Field: TMessageField;
+      CanName: AnsiString;
+      FieldType: AnsiString;
+
+    begin
+      Unitcode.ImplementationCode.Methods.Add(
+        Format('procedure %s.SaveToStream(Stream: TProtoStreamWriter);', [GetMessageClassName]));
+      if MessageHasRepeatedNonSimple then
+      begin
+        Unitcode.ImplementationCode.Methods.Add('var');
+        Unitcode.ImplementationCode.Methods.Add('  BaseMessage: TBaseMessage;');
+        Unitcode.ImplementationCode.Methods.Add('');
+
+      end;
+
+      Unitcode.ImplementationCode.Methods.Add('begin');
+
+      for Field in aMessage.Fields do
+      begin
+        CanName := Canonicalize(Field.Name);
+        FieldType :=  Field.FPCType;
+
+        if IsSimpleType(Field.FieldType) and not Field.IsRepeated then
+        begin
+          Unitcode.ImplementationCode.Methods.Add(Format('  Save%s(Stream, F%s, %d);',
+            [FieldType, CanName, Field.FieldNumber]));
+        end
+        else if IsSimpleType(Field.FieldType) and Field.IsRepeated then
+        begin
+          FieldType :=  GetNonRepeatedType4FPC(Field.FieldType);
+
+          case FieldType of
+          'AnsiString', 'Single', 'Double', 'Int32', 'Int64', 'UInt32', 'UInt64', 'Boolean', 'Byte':
+            Unitcode.ImplementationCode.Methods.Add(Format('  SaveRepeated%s(Stream, F%s, %d);',
+              [FieldType, CanName, Field.FieldNumber]))
+          else
+             raise Exception.Create(Format('Type %s is not supported yet',
+                 [Field.FPCType]));
+          end;
+        end
+        else if not IsSimpleType(Field.FieldType) and not Field.IsRepeated then
+        begin
+          Unitcode.ImplementationCode.Methods.Add(Format('  SaveMessage(Stream, F%s, %d);',
+            [CanName, Field.FieldNumber]));
+        end
+        else if not IsSimpleType(Field.FieldType) and Field.IsRepeated then
+        begin
+          Unitcode.ImplementationCode.Methods.Add(Format('  if F%s <> nil then', [CanName]));
+          Unitcode.ImplementationCode.Methods.Add(Format('    for BaseMessage in F%s do', [CanName]));
+          Unitcode.ImplementationCode.Methods.Add(Format('      SaveMessage(Stream, BaseMessage, %d);',
+                           [Field.FieldNumber]));
+          Unitcode.ImplementationCode.Methods.Add('');
+        end;
+
+        Unitcode.ImplementationCode.Methods.Add('');
+      end;
+
+      Unitcode.ImplementationCode.Methods.Add('end;');
+      Unitcode.ImplementationCode.Methods.Add('');
+
+    end;
+
+    procedure GenerateLoadFromStream;
+    var
+      Field: TMessageField;
+      CanName: AnsiString;
+      FieldType: AnsiString;
+
+    begin
+      Unitcode.ImplementationCode.Methods.Add(Format('function %s.LoadFromStream(Stream: TProtoStreamReader; Len: Integer): Boolean;', [GetMessageClassName]));
+      Unitcode.ImplementationCode.Methods.Add('var');
+      Unitcode.ImplementationCode.Methods.Add('  StartPos, FieldNumber, WireType: Integer;'+ sLineBreak);
+
+      Unitcode.ImplementationCode.Methods.Add('begin');
+      Unitcode.ImplementationCode.Methods.Add('  StartPos := Stream.Position;');
+      Unitcode.ImplementationCode.Methods.Add('  while Stream.Position < StartPos + Len do');
+      Unitcode.ImplementationCode.Methods.Add('  begin');
+      Unitcode.ImplementationCode.Methods.Add('    Stream.ReadTag(FieldNumber, WireType);');
+
+      Unitcode.ImplementationCode.Methods.Add('');
+      Unitcode.ImplementationCode.Methods.Add('    case FieldNumber of');
+
+      for Field in aMessage.Fields do
+      begin
+        CanName := Canonicalize(Field.Name);
+        FieldType :=  Field.FPCType;
+
+
+        if IsSimpleType(Field.FieldType) and not Field.IsRepeated then
+        begin
+          Unitcode.ImplementationCode.Methods.Add(Format('    %d: F%s := Load%s(Stream);' + sLineBreak,
+            [Field.FieldNumber, CanName, FieldType]));
+        end
+        else if IsSimpleType(Field.FieldType) and Field.IsRepeated then
+        begin
+          CanName := Canonicalize(Field.Name);
+          FieldType :=  GetNonRepeatedType4FPC(Field.FieldType);
+
+          case FieldType of
+          'AnsiString', 'Single', 'Double', 'Int32', 'Int64', 'UInt32', 'UInt64', 'Boolean', 'Byte':
+          begin
+            Unitcode.ImplementationCode.Methods.Add(Format('    %d:', [Field.FieldNumber]));
+            Unitcode.ImplementationCode.Methods.Add('    begin' + sLineBreak);
+            Unitcode.ImplementationCode.Methods.Add('      if WireType <> 2 then' + sLineBreak +
+                                    '        Exit(False);');
+            Unitcode.ImplementationCode.Methods.Add(Format('      LoadRepeated%s(Stream, GetOrCreateAll%s);',
+                 [FieldType, CanName]));
+            Unitcode.ImplementationCode.Methods.Add('    end;' + sLineBreak);
+          end
+          else
+             raise Exception.Create(Format('Type %s is not supported yet',
+                 [Field.FPCType]));
+          end;
+        end
+        else if not IsSimpleType(Field.FieldType) and not Field.IsRepeated then
+        begin
+          Unitcode.ImplementationCode.Methods.Add(Format('    %d:', [Field.FieldNumber]));
+          Unitcode.ImplementationCode.Methods.Add       ('    begin');
+          Unitcode.ImplementationCode.Methods.Add       ('      if WireType <> 2 then' + sLineBreak +
+                                                         '        Exit(False);');
+          Unitcode.ImplementationCode.Methods.Add(Format('      F%s := %s.Create;', [CanName, FieldType]));
+          Unitcode.ImplementationCode.Methods.Add(Format('      if not LoadMessage(Stream, F%s) then' + sLineBreak +
+                                                         '        Exit(False);', [CanName]));
+          Unitcode.ImplementationCode.Methods.Add(       '    end;' + sLineBreak);
+        end
+        else if not IsSimpleType(Field.FieldType) and Field.IsRepeated then
+        begin
+          Unitcode.ImplementationCode.Methods.Add(Format('    %d:', [Field.FieldNumber]));
+          Unitcode.ImplementationCode.Methods.Add       ('    begin');
+          Unitcode.ImplementationCode.Methods.Add       ('      if WireType <> 2 then' + sLineBreak +
+                                                         '        Exit(False);');
+          Unitcode.ImplementationCode.Methods.Add(Format('      GetOrCreateAll%s.Add(%s.Create);', [CanName, GetNonRepeatedType4FPC(Field.FieldType)]));
+          Unitcode.ImplementationCode.Methods.Add(Format('      if not LoadMessage(Stream, F%s.Last) then' + sLineBreak +
+                                                         '        Exit(False);', [CanName]));
+          Unitcode.ImplementationCode.Methods.Add       ('    end;' + sLineBreak);
+          Unitcode.ImplementationCode.Methods.Add('');
+        end;
+
+        Unitcode.ImplementationCode.Methods.Add('');
+      end;
+      Unitcode.ImplementationCode.Methods.Add('    end;');
+      Unitcode.ImplementationCode.Methods.Add('  end;' + sLineBreak);
+
+      Unitcode.ImplementationCode.Methods.Add('  Result := StartPos + Len = Stream.Position;');
+      Unitcode.ImplementationCode.Methods.Add('end;');
+
+    end;
+
+    begin
+      GenerateConstructors;
+      Unitcode.ImplementationCode.Methods.Add('');
+      GenerateDestructor;
+      Unitcode.ImplementationCode.Methods.Add('');
+      GenerateToString;
+      Unitcode.ImplementationCode.Methods.Add('');
+      GenerateSaveToStream;
+      Unitcode.ImplementationCode.Methods.Add('');
       GenerateLoadFromStream;
-      }
-    }
   end;
 
 begin
   GenerateDeclarationForMessage(AMessage, Unitcode);
   GenerateImplementationForMessage(AMessage, Unitcode);
+
 end;
 
 procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
@@ -615,13 +623,15 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
   begin
     Result := Template;
     Result := StringReplace(Result, '[[Field.Type]]', aField.FieldType, [rfReplaceAll]);
+    Result := StringReplace(Result, '[[Field.FPCType]]', aField.FPCType, [rfReplaceAll]);
     Result := StringReplace(Result, '[[Field.Name]]', aField.Name, [rfReplaceAll]);
     Result := StringReplace(Result, '[[Field.Number]]', IntToStr(aField.FieldNumber), [rfReplaceAll]);
     Result := StringReplace(Result, '[[Field.DefaultValue]]', aField.DefaultValue, [rfReplaceAll]);
     Result := StringReplace(Result, '[[CanName]]', Canonicalize(aField.Name), [rfReplaceAll]);
-    Result := StringReplace(Result, '[[FieldType]]', GetTypeName(Prefix, aField.FieldType), [rfReplaceAll]);
     Result := StringReplace(Result, '[[FormatString]]', FormatString(aField.FieldType), [rfReplaceAll]);
     Result := StringReplace(Result, '[[ClassName]]', MessageClassName, [rfReplaceAll]);
+    if aField.IsRepeated then
+      Result := StringReplace(Result, '[[Field.InnerFPCType]]', GetNonRepeatedType4FPC(aField.FieldType), [rfReplaceAll]);
 
   end;
 
@@ -648,7 +658,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
     if not aField.IsRepeated then
     else if not IsSimpleType(aField.FieldType) then
       UnitCode.ImplementationCode.Methods.Add(ApplyPattern(MessageClassName, ImplementRepeatedNonSimpleFieldTemplate))
-    else if GetTypeName(Prefix, aField.FieldType) = 'Boolean' then
+    else if aField.FPCType = 'Boolean' then
       UnitCode.ImplementationCode.Methods.Add(ApplyPattern(MessageClassName, ImplementRepeatedBooleanTemplate))
     else
       UnitCode.ImplementationCode.Methods.Add(ApplyPattern(MessageClassName, ImplementRepeatedSimpleFieldTemplate));
@@ -669,25 +679,25 @@ procedure TPBCodeGeneratorV1.GenerateCodeForOneOf(const OneOf: TOneOf; out
     Field: TOneOfField;
 
   begin
-    Unitcode.InterfaceCode.TypeList.Add(Format('%s%s = Class(TBaseOneOf)', [Indent, GetTypeName(Prefix, OneOf.Name)]));
+    Unitcode.InterfaceCode.TypeList.Add(Format('%s%s = Class(TBaseOneOf)', [Indent, OneOf.FPCType]));
     Unitcode.InterfaceCode.TypeList.Add(Format('%sprivate', [Indent]));
 
     for Field in OneOf.Fields do
-      Unitcode.InterfaceCode.TypeList.Add(Format('%sF%s: %s;', [Indent + '  ', Canonicalize(Field.Name), GetTypeName(Prefix, Field.OneOfFieldType)]));
+      Unitcode.InterfaceCode.TypeList.Add(Format('%sF%s: %s;', [Indent + '  ', Canonicalize(Field.Name), Field.FPCType]));
     Unitcode.InterfaceCode.TypeList.Add('');
     for Field in OneOf.Fields do
     begin
       Unitcode.InterfaceCode.TypeList.Add(Format('%sfunction Get%s: %s;',
-      [Indent + '  ', Canonicalize(Field.Name), GetTypeName(Prefix, Field.OneOfFieldType)]));
+      [Indent + '  ', Canonicalize(Field.Name), Field.FPCType]));
       Unitcode.InterfaceCode.TypeList.Add(Format('%sprocedure Set%s(_%s: %s);',
       [Indent + '  ', Canonicalize(Field.Name), Canonicalize(Field.Name),
-        GetTypeName(Prefix, Field.OneOfFieldType)]));
+        Field.FPCType]));
     end;
     Unitcode.InterfaceCode.TypeList.Add('  public');
 
     for Field in OneOf.Fields do
       Unitcode.InterfaceCode.TypeList.Add(Format('%sproperty %s: %s read Get%s write Set%s;',
-        [Indent + '  ', Canonicalize(Field.Name), GetTypeName(Prefix, Field.OneOfFieldType),
+        [Indent + '  ', Canonicalize(Field.Name), Field.FPCType,
         Canonicalize(Field.Name), Canonicalize(Field.Name)]));
     Unitcode.InterfaceCode.TypeList.Add('');
     Unitcode.InterfaceCode.TypeList.Add('%sconstructor Create;', [Indent + '  ']);
@@ -700,21 +710,21 @@ procedure TPBCodeGeneratorV1.GenerateCodeForOneOf(const OneOf: TOneOf; out
     Field: TOneOfField;
 
   begin
-    Unitcode.InterfaceCode.TypeList.Add(Format('%s%s = Class(TBaseOneOf)', [Indent, GetTypeName(Prefix, OneOf.Name)]));
+    Unitcode.InterfaceCode.TypeList.Add(Format('%s%s = Class(TBaseOneOf)', [Indent, OneOf.FPCType]));
     Unitcode.InterfaceCode.TypeList.Add(Format('%sprivate', [Indent]));
 
     for Field in OneOf.Fields do
-      Unitcode.InterfaceCode.TypeList.Add(Format('%sF%s: %s;', [Indent + '  ', Canonicalize(Field.Name), GetTypeName(Prefix, Field.OneOfFieldType)]));
+      Unitcode.InterfaceCode.TypeList.Add(Format('%sF%s: %s;', [Indent + '  ', Canonicalize(Field.Name), Field.FPCType]));
     Unitcode.InterfaceCode.TypeList.Add('');
     for Field in OneOf.Fields do
       Unitcode.InterfaceCode.TypeList.Add(Format('%sprocedure Set%s(_%s: %s);',
       [Indent + '  ', Canonicalize(Field.Name), Canonicalize(Field.Name),
-        GetTypeName(Prefix, Field.OneOfFieldType)]));
+        Field.FPCType]));
     Unitcode.InterfaceCode.TypeList.Add('  public');
 
     for Field in OneOf.Fields do
       Unitcode.InterfaceCode.TypeList.Add(Format('%sproperty %s: %s read F%s write Set%s;',
-        [Indent + '  ', Canonicalize(Field.Name), GetTypeName(Prefix, Field.OneOfFieldType),
+        [Indent + '  ', Canonicalize(Field.Name), Field.FPCType,
         Canonicalize(Field.Name), Canonicalize(Field.Name)]));
     Unitcode.InterfaceCode.TypeList.Add('');
     Unitcode.InterfaceCode.TypeList.Add('%sconstructor Create;', [Indent + '  ']);
@@ -746,7 +756,7 @@ begin
     GenerateCodeForEnum(Enum, UnitCode, '', '  ');
 
   for Message in Proto.Messages do
-    UnitCode.InterfaceCode.TypeList.Add('%s%s = class;', ['  ', GetTypeName('', Message.Name)]);
+    UnitCode.InterfaceCode.TypeList.Add('%s%s = class;', ['  ', Message.FPCType]);
 
   UnitCode.InterfaceCode.TypeList.Add('');
 
