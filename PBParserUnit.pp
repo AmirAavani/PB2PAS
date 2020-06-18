@@ -135,7 +135,7 @@ type
     function ParseSyntax: Boolean;
     function ParseMessage: TMessage;
     function ParseEnum: TEnum;
-    function ParseEnumField: TEnumField;
+    function ParseEnumField(EnumName: AnsiString): TEnumField;
     function ParsePackage: AnsiString;
     function ParseOption(EndTokenTypes: array of TTokenKind): TOption;
     function MaybeParseOptions: TOptions;
@@ -850,7 +850,7 @@ begin
     else
     begin
       Tokenizer.Rewind;
-      EnumFields.Add(ParseEnumField);
+      EnumFields.Add(ParseEnumField(FName))
     end;
 
     Token := Tokenizer.GetNextToken;
@@ -861,7 +861,7 @@ begin
   EnumFields.Free;
 end;
 
-function TProto3Parser.ParseEnumField: TEnumField;
+function TProto3Parser.ParseEnumField(EnumName: AnsiString): TEnumField;
 var
   Token: TToken;
   Name: AnsiString;
@@ -882,7 +882,7 @@ begin
 
   Tokenizer.Expect(ttkSemiColon);
 
-  Result := TEnumField.Create(Name, Options, Value);
+  Result := TEnumField.Create(EnumName, Name, Options, Value);
 
 
 end;

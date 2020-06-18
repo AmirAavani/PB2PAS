@@ -241,8 +241,7 @@ begin
   for i := 0 to AnEnum.Count - 1 do
   begin
     EnumField := AnEnum[i];
-    WriteStr(Format('%s%s_%s = %d', [Indent + '  ', Canonicalize(AnEnum.Name),
-      Canonicalize(EnumField.Name), EnumField.Value]),
+    WriteStr(Format('%s%s = %d', [Indent + '  ', EnumField.Name, EnumField.Value]),
       Code);
     if i <> AnEnum.Count - 1 then
       WriteLineStr(',', Code)
@@ -323,8 +322,11 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
     begin
       S := Format('%sconstructor Create(', [Indent]);
       for Field in aMessage.Fields do
+      begin
+
         S += Format('a%s: %s; ', [Canonicalize(Field.Name),
           Field.FPCType]);
+      end;
       S[Length(S) - 1] := ')';
       S[Length(S)] := ';';
       Unitcode.InterfaceCode.TypeList.Add(S);
@@ -354,16 +356,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       Unitcode.ImplementationCode.Methods.Add('begin');
       Unitcode.ImplementationCode.Methods.Add('  inherited Create;');
       Unitcode.ImplementationCode.Methods.Add(sLineBreak);
-      Unitcode.ImplementationCode.Methods.Add(sLineBreak);
-
-      for Field in aMessage.Fields do
-      begin
-        CanName := Canonicalize(Field.Name);
-        if Field.DefaultValue <> '' then
-          Unitcode.ImplementationCode.Methods.Add(Format('  F%s := %s;', [CanName, Field.DefaultValue]));
-      end;
-
-      Unitcode.ImplementationCode.Methods.Add(sLineBreak + 'end;' + sLineBreak);
+      Unitcode.ImplementationCode.Methods.Add('end;' + sLineBreak);
 
       if aMessage.Fields.Count <> 0 then
       begin
@@ -406,7 +399,6 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       Unitcode.ImplementationCode.Methods.Add('');
       Unitcode.ImplementationCode.Methods.Add('  inherited;');
       Unitcode.ImplementationCode.Methods.Add('end;');
-
 
     end;
 
@@ -624,14 +616,22 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
     Result := Template;
     Result := StringReplace(Result, '[[Field.Type]]', aField.FieldType, [rfReplaceAll]);
     Result := StringReplace(Result, '[[Field.FPCType]]', aField.FPCType, [rfReplaceAll]);
+    if aField.PackageName <> '' then
+      Result := StringReplace(Result, '[[Field.PackageNameWithDot]]',
+        GetUnitName(aField.PackageName) + '.', [rfReplaceAll])
+    else
+      Result := StringReplace(Result, '[[Field.PackageNameWithDot]]', '', [rfReplaceAll]);
+
     Result := StringReplace(Result, '[[Field.Name]]', aField.Name, [rfReplaceAll]);
     Result := StringReplace(Result, '[[Field.Number]]', IntToStr(aField.FieldNumber), [rfReplaceAll]);
-    Result := StringReplace(Result, '[[Field.DefaultValue]]', aField.DefaultValue, [rfReplaceAll]);
     Result := StringReplace(Result, '[[CanName]]', Canonicalize(aField.Name), [rfReplaceAll]);
     Result := StringReplace(Result, '[[FormatString]]', FormatString(aField.FieldType), [rfReplaceAll]);
     Result := StringReplace(Result, '[[ClassName]]', MessageClassName, [rfReplaceAll]);
     if aField.IsRepeated then
+    begin
+
       Result := StringReplace(Result, '[[Field.InnerFPCType]]', GetNonRepeatedType4FPC(aField.FieldType), [rfReplaceAll]);
+    end;
 
   end;
 
@@ -665,8 +665,9 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
 
   end;
 
-
 begin
+  if aField.Name = 'territory_type' then
+   WriteLn(aField.Name);
   GenerateDeclaration;
   GenerateImplementation;
 end;

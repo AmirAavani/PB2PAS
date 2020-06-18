@@ -43,6 +43,7 @@ type
 
   TOptions = specialize TObjectList<TOption>;
   TMessage = class;
+  TImports = class;
 
   { TMessageField }
 
@@ -59,7 +60,6 @@ type
     procedure GenerateDeclaration(Prefix, MessageClassName: AnsiString; Output: TMyTextStream);
     procedure GenerateImplementation(Prefix, MessageClassName: AnsiString; Output: TMyTextStream);
 
-    function GetDefaultValue: AnsiString; virtual;
     procedure GenerateToString(Output: TMyTextStream);
     function GetFieldNumber: Integer; virtual;
     function GetFieldType: TType; virtual;
@@ -68,15 +68,17 @@ type
     function GetOptions: TOptions;  virtual;
     // Returns the translation of FieldType to FPC.
     function GetFPCType: AnsiString;  virtual;
-    function GetPrefix: AnsiString; virtual;
+    function GetPackageAndFPCType: AnsiString;
+    function GetPackageName: AnsiString; virtual;
   public
     property IsRepeated: Boolean read GetIsRepeated;
     property FieldType: TType read GetFieldType;
     property FPCType: AnsiString read GetFPCType;
+    property PackageAndFPCType: AnsiString read GetPackageAndFPCType;
+    property PackageName: AnsiString read GetPackageName;
     property Name: AnsiString read GetName;
     property FieldNumber: Integer read GetFieldNumber;
     property Options: TOptions read GetOptions;
-    property DefaultValue: AnsiString read GetDefaultValue;
 
     constructor Create(_Name: AnsiString; _FieldType: TType; _IsRepeated: Boolean;
       _FieldNumber: Integer; _Options: TOptions);
@@ -94,12 +96,17 @@ type
     FName: AnsiString;
     FOptions: TOptions;
     FValue: Integer;
+    FEnumName: AnsiString;
+    function GetFPCValue: AnsiString;
+
   public
+    property EnumName: AnsiString read FEnumName;
     property Name: AnsiString read FName;
     property Value: Integer read FValue;
     property Options: specialize TObjectList<TOption> read FOptions;
+    property FPCValue: AnsiString read GetFPCValue;
 
-    constructor Create(_Name: AnsiString; _Options: TOptions; _Value: Integer);
+    constructor Create(_EnumName, _Name: AnsiString; _Options: TOptions; _Value: Integer);
     destructor Destroy; override;
     function ToXML: AnsiString;
 
@@ -115,6 +122,7 @@ type
     FOptions: TOptions;
   public
     property Name: AnsiString read FName;
+    property Options: TOptions read FOptions;
 
     constructor Create(_Name: AnsiString; _Options: TOptions;
         _EnumFields: TEnumFields);
@@ -172,7 +180,6 @@ type
     FKeyType: TType;
     FValueType: TType;
 
-    function GetDefaultValue: AnsiString; override;
     function GetFieldType: TType; override;
     // Returns the translation of FieldType to FPC.
     function GetFPCType: AnsiString; override;
@@ -367,11 +374,6 @@ end;
 
 { TMap }
 
-function TMap.GetDefaultValue: AnsiString;
-begin
-  Result:= 'nil';
-end;
-
 function TMap.GetFieldType: TType;
 begin
   Result:= Format('map<%s, %s>', [FKeyType, FValueType]);
@@ -508,11 +510,17 @@ end;
 
 { TEnumField }
 
-constructor TEnumField.Create(_Name: AnsiString; _Options: TOptions;
+function TEnumField.GetFPCValue: AnsiString;
+begin
+  Result := Format('%s_%s', [Canonicalize(EnumName), Canonicalize(Self.Name)]);
+end;
+
+constructor TEnumField.Create(_EnumName, _Name: AnsiString; _Options: TOptions;
   _Value: Integer);
 begin
   inherited Create;
 
+  FEnumName := _EnumName;
   FName := _Name;
   FOptions := _Options;
   FValue := _Value;
@@ -635,7 +643,6 @@ begin
   Result := StringReplace(Result, '[[Field.Type]]', Self.FieldType, [rfReplaceAll]);
   Result := StringReplace(Result, '[[Field.Name]]', Self.Name, [rfReplaceAll]);
   Result := StringReplace(Result, '[[Field.Number]]', IntToStr(Self.FieldNumber), [rfReplaceAll]);
-  Result := StringReplace(Result, '[[Field.DefaultValue]]', Self.DefaultValue, [rfReplaceAll]);
   Result := StringReplace(Result, '[[CanName]]', Canonicalize(Self.Name), [rfReplaceAll]);
   Result := StringReplace(Result, '[[FieldType]]', GetFPCType, [rfReplaceAll]);
   Result := StringReplace(Result, '[[FormatString]]', FormatString(FieldType), [rfReplaceAll]);
@@ -674,6 +681,7 @@ begin
     Output.WriteLine(ApplyPattern(Prefix, MessageClassName, ImplementRepeatedSimpleFieldTemplate));
 end;
 
+{
 function TMessageField.GetDefaultValue: AnsiString;
 begin
   if IsRepeated or not IsSimpleType(FieldType) then
@@ -696,6 +704,7 @@ begin
          [GetFPCType]));
   end;
 end;
+}
 
 procedure TMessageField.GenerateToString(Output: TMyTextStream);
 var
@@ -716,9 +725,6 @@ begin
                        [CanName, CanName]));
       Output.WriteLine;
     end
-    else if DefaultValue <> '' then
-      Output.WriteLine(
-        ApplyPattern('', '', ImplementNonRepeatedSimpleFieldToStringTemplate))
     else
     begin
       Output.WriteLine(Format('  Result += Format(''%s: %%%s '', [F%s]) + sLineBreak;',
@@ -757,8 +763,20 @@ begin
 end;
 
 function TMessageField.GetFieldType: TType;
+var
+  Parts: TStringList;
+
 begin
   Result := FFieldType;
+  if Pos('.', Result) = 0 then
+    Exit;
+
+  Parts := TStringList.Create;
+  Parts.Delimiter:= '.';
+  Parts.DelimitedText := Result;
+
+  Result := Parts.Strings[Parts.Count - 1];
+  Parts.Free;
 
 end;
 
@@ -781,22 +799,41 @@ begin
 end;
 
 function TMessageField.GetFPCType: AnsiString;
+var
+  ThisFieldType: AnsiString;
+
 begin
+  ThisFieldType := FieldType;
+
   if IsRepeated then
-  begin
-    if IsSimpleType(FieldType) then
-      Result := 'T' + GetNonRepeatedType4FPC(FieldType) + 's'
-    else
-      Result := GetNonRepeatedType4FPC(FieldType) + 's';
-  end
+    Result := 'T' + Canonicalize(FName)
   else
-    Result := GetNonRepeatedType4FPC(FieldType);
+    Result := GetNonRepeatedType4FPC(ThisFieldType);
 
 end;
 
-function TMessageField.GetPrefix: AnsiString;
+function TMessageField.GetPackageAndFPCType: AnsiString;
 begin
-  raise ENotImplementedYet.Create('');
+  Result := FPCType;
+  if PackageName <> '' then
+    Result := PackageName + '.' + Result;
+
+end;
+
+function TMessageField.GetPackageName: AnsiString;
+var
+  Parts: TStringList;
+
+begin
+  if Pos('.', FFieldType) = 0 then
+    Exit('');
+
+  Parts := TStringList.Create;
+  Parts.Delimiter:= '.';
+  Parts.DelimitedText := FFieldType;
+
+  Result := Parts[Parts.Count - 2];
+  Parts.Free;
 end;
 
 constructor TMessageField.Create(_Name: AnsiString;
