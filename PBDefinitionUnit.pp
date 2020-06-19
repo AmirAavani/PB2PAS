@@ -56,11 +56,6 @@ type
     FName: AnsiString;
     FOptions: TOptions;
 
-    function ApplyPattern(Prefix, MessageClassName: AnsiString; const Template: AnsiString): AnsiString;
-    procedure GenerateDeclaration(Prefix, MessageClassName: AnsiString; Output: TMyTextStream);
-    procedure GenerateImplementation(Prefix, MessageClassName: AnsiString; Output: TMyTextStream);
-
-    procedure GenerateToString(Output: TMyTextStream);
     function GetFieldNumber: Integer; virtual;
     function GetFieldType: TType; virtual;
     function GetIsRepeated: Boolean; virtual;
@@ -249,6 +244,7 @@ type
   TProto = class(TObject)
   private
     Filename: AnsiString;
+    FPackageName: AnsiString;
     FSyntax: AnsiString;
     FImports: TImports;
     FPackages: TPackages;
@@ -264,6 +260,7 @@ type
     property Enums: TEnums read FEnums;
     property Syntax: AnsiString read FSyntax;
     property InputProtoFilename: AnsiString read Filename;
+    property PackageName: AnsiString read FPackageName;
 
     constructor Create(_Filename: AnsiString; _Syntax: AnsiString; _Imports: TImports; _Packages: TPackages;
         _Options: TOptions; _Messages: TMessages; _Enums: TEnums);
@@ -635,128 +632,6 @@ begin
 end;
 
 { TMessageField }
-
-function TMessageField.ApplyPattern(Prefix, MessageClassName: AnsiString;
-  const Template: AnsiString): AnsiString;
-begin
-  Result := Template;
-  Result := StringReplace(Result, '[[Field.Type]]', Self.FieldType, [rfReplaceAll]);
-  Result := StringReplace(Result, '[[Field.Name]]', Self.Name, [rfReplaceAll]);
-  Result := StringReplace(Result, '[[Field.Number]]', IntToStr(Self.FieldNumber), [rfReplaceAll]);
-  Result := StringReplace(Result, '[[CanName]]', Canonicalize(Self.Name), [rfReplaceAll]);
-  Result := StringReplace(Result, '[[FieldType]]', GetFPCType, [rfReplaceAll]);
-  Result := StringReplace(Result, '[[FormatString]]', FormatString(FieldType), [rfReplaceAll]);
-  Result := StringReplace(Result, '[[ClassName]]', MessageClassName, [rfReplaceAll]);
-
-end;
-
-{$i NonRepeatedSimpleFieldTemplate.inc}
-{$i NonRepeatedNonSimpleFieldTemplate.inc}
-{$i RepeatedNonSimpleFieldTemplate.inc}
-{$i RepeatedSimpleFieldTemplate.inc}
-
-
-procedure TMessageField.GenerateDeclaration(Prefix, MessageClassName: AnsiString;
-  Output: TMyTextStream);
-begin
-  if not IsRepeated and IsSimpleType(FieldType) then
-    Output.WriteLine(ApplyPattern(Prefix, MessageClassName, DeclareNonRepeatedSimpleFieldTemplate))
-  else if not IsRepeated and not IsSimpleType(FieldType) then
-    Output.WriteLine(ApplyPattern(Prefix, MessageClassName, DeclareNonRepeatedNonSimpleFieldTemplate))
-  else if IsRepeated and not IsSimpleType(FieldType) then
-    Output.WriteLine(ApplyPattern(Prefix, MessageClassName, DeclareRepeatedNonSimpleFieldTemplate))
-  else
-    Output.WriteLine(ApplyPattern(Prefix, MessageClassName, DeclareRepeatedSimpleFieldTemplate));
-end;
-
-procedure TMessageField.GenerateImplementation(Prefix, MessageClassName: AnsiString;
-  Output: TMyTextStream);
-begin
-  if not IsRepeated then
-  else if not IsSimpleType(FieldType) then
-    Output.WriteLine(ApplyPattern(Prefix, MessageClassName, ImplementRepeatedNonSimpleFieldTemplate))
-  else if GetFPCType = 'Boolean' then
-    Output.WriteLine(ApplyPattern(Prefix, MessageClassName, ImplementRepeatedBooleanTemplate))
-  else
-    Output.WriteLine(ApplyPattern(Prefix, MessageClassName, ImplementRepeatedSimpleFieldTemplate));
-end;
-
-{
-function TMessageField.GetDefaultValue: AnsiString;
-begin
-  if IsRepeated or not IsSimpleType(FieldType) then
-    Exit('nil');
-
-  case GetFPCType of
-    'Double',
-    'Single': Exit('0.0');
-    'Byte',
-    'Int16',
-    'Int32',
-    'Int64',
-    'UInt16',
-    'UInt32',
-    'UInt64': Exit('0');
-    'Boolean': Exit('False');
-    'AnsiString': Exit('''''');
-    else
-       raise Exception.Create(Format('Type %s is not supported yet',
-         [GetFPCType]));
-  end;
-end;
-}
-
-procedure TMessageField.GenerateToString(Output: TMyTextStream);
-var
-  CanName: AnsiString;
-
-begin
-  CanName := Canonicalize(Self.Name);
-
-  if IsSimpleType(FieldType) and not IsRepeated then
-  begin
-    if GetFPCType = 'Boolean' then
-    begin
-      Output.WriteLine(Format(
-                       '  if F%s then',
-                       [CanName]));
-      Output.WriteLine(Format(
-                       '    Result += Format(''F%s: %%s'', [IfThen(F%s, ''True'', ''False'')]) + sLineBreak;',
-                       [CanName, CanName]));
-      Output.WriteLine;
-    end
-    else
-    begin
-      Output.WriteLine(Format('  Result += Format(''%s: %%%s '', [F%s]) + sLineBreak;',
-        [Self.Name, FormatString(FieldType), CanName]));
-      Output.WriteLine;
-    end;
-
-  end
-  else  if not IsSimpleType(FieldType) and not IsRepeated then
-    Output.WriteLine(
-      ApplyPattern('', '', ImplementNonRepeatedNonSimpleFieldToStringTemplate))
-  else if IsSimpleType(FieldType) and IsRepeated then
-    Output.WriteLine(
-      ApplyPattern('', '', ImplementRepeatedSimpleFieldToStringTemplate))
-  else if IsSimpleType(FieldType) and IsRepeated then
-    Output.WriteLine(
-      ApplyPattern('', '', ImplementRepeatedNonSimpleFieldToStringTemplate))
-  else if not IsSimpleType(FieldType) and IsRepeated then
-  begin
-    Output.WriteLine(Format('    if F%s <> nil then', [CanName]));
-    Output.WriteLine(       '    begin');
-    Output.WriteLine(Format('      Result += ''%s  = '';', [Self.Name]));
-    Output.WriteLine(Format('      for BaseMessage in F%s do',
-                   [CanName]));
-    Output.WriteLine(       '        Result += Format(''[%s]'', [BaseMessage.ToString]);');
-    Output.WriteLine(       '      Result += sLineBreak;');
-    Output.WriteLine(       '    end;');
-  end
-  else
-  raise Exception.Create('Invalid Msg');
-end;
-
 function TMessageField.GetFieldNumber: Integer;
 begin
   Result := FFieldNumber;

@@ -5,13 +5,16 @@ unit UtilsUnit;
 interface
 
 uses
-  Classes, SysUtils;
+  PBDefinitionUnit, Classes, SysUtils, fgl;
+
+type
+  TProtos = specialize TFPGList<TProto>;
 
 function Canonicalize(AName: AnsiString): AnsiString;
 function FormatString(const FieldType: AnsiString): AnsiString;
 function GetUnitName(const Filename: AnsiString): AnsiString;
 function GetNonRepeatedType4FPC(TypeName: AnsiString): AnsiString;
-function IsSimpleType(TypeName: AnsiString): Boolean;
+function IsSimpleType(MessageField: TMessageField; RelatedProtos: TProtos): Boolean;
 
 type
   ENotImplementedYet = class(Exception);
@@ -76,10 +79,11 @@ begin
   end;
 end;
 
-function IsSimpleType(TypeName: AnsiString): Boolean;
+function IsSimpleType(MessageField: TMessageField; RelatedProtos: TProtos
+  ): Boolean;
 begin
   Result := True;
-  case TypeName of
+  case MessageField.FPCType of
     'double': Exit;
     'float': Exit;
     'int16': Exit;

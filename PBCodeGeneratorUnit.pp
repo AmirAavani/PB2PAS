@@ -5,15 +5,14 @@ unit PBCodeGeneratorUnit;
 interface
 
 uses
-  Classes, SysUtils, PBDefinitionUnit;
+  PBDefinitionUnit, UtilsUnit, Classes, SysUtils, fgl;
 
 type
-
   { TPBBaseCodeGenerator }
 
   TPBBaseCodeGenerator = class(TObject)
   public
-    class function GetCodeGenerator(Proto: TProto): TPBBaseCodeGenerator;
+    class function GetCodeGenerator(Proto: TProto; RelatedProtos: TProtos): TPBBaseCodeGenerator;
 
     procedure GenerateCode; virtual; abstract;
     destructor Destroy; override;
@@ -21,7 +20,7 @@ type
 
 implementation
 uses
-  UtilsUnit, StreamUnit, StringUnit, strutils;
+  StreamUnit, StringUnit, strutils;
 
 type
 
@@ -72,6 +71,7 @@ type
   TPBCodeGeneratorV1 = class(TPBBaseCodeGenerator)
   private
     Proto: TProto;
+    RelatedProtos: TProtos;
     OutputStream: TStream;
 
   protected
@@ -84,7 +84,7 @@ type
   public
     procedure GenerateCode; override;
 
-    constructor Create(_Proto: TProto);
+    constructor Create(_Proto: TProto; _RelatedProtos: TProtos);
     destructor Destroy; override;
 
   end;
@@ -393,7 +393,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       for Field in aMessage.Fields do
       begin
         CanName := Canonicalize(Field.Name);
-        if not IsSimpleType(Field.FieldType) or Field.IsRepeated then
+        if not IsSimpleType(Field, RelatedProtos) or Field.IsRepeated then
           Unitcode.ImplementationCode.Methods.Add(Format('  F%s.Free;', [CanName]));
       end;
       Unitcode.ImplementationCode.Methods.Add('');
@@ -410,7 +410,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       Result := False;
 
       for Field in aMessage.Fields do
-        if Field.IsRepeated and not IsSimpleType(Field.FieldType) then
+        if Field.IsRepeated and not IsSimpleType(Field, RelatedProtos) then
           Exit(True);
 
     end;
@@ -462,12 +462,12 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         CanName := Canonicalize(Field.Name);
         FieldType :=  Field.FPCType;
 
-        if IsSimpleType(Field.FieldType) and not Field.IsRepeated then
+        if IsSimpleType(Field, RelatedProtos) and not Field.IsRepeated then
         begin
           Unitcode.ImplementationCode.Methods.Add(Format('  Save%s(Stream, F%s, %d);',
             [FieldType, CanName, Field.FieldNumber]));
         end
-        else if IsSimpleType(Field.FieldType) and Field.IsRepeated then
+        else if IsSimpleType(Field, RelatedProtos) and Field.IsRepeated then
         begin
           FieldType :=  GetNonRepeatedType4FPC(Field.FieldType);
 
@@ -480,12 +480,12 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
                  [Field.FPCType]));
           end;
         end
-        else if not IsSimpleType(Field.FieldType) and not Field.IsRepeated then
+        else if not IsSimpleType(Field, RelatedProtos) and not Field.IsRepeated then
         begin
           Unitcode.ImplementationCode.Methods.Add(Format('  SaveMessage(Stream, F%s, %d);',
             [CanName, Field.FieldNumber]));
         end
-        else if not IsSimpleType(Field.FieldType) and Field.IsRepeated then
+        else if not IsSimpleType(Field, RelatedProtos) and Field.IsRepeated then
         begin
           Unitcode.ImplementationCode.Methods.Add(Format('  if F%s <> nil then', [CanName]));
           Unitcode.ImplementationCode.Methods.Add(Format('    for BaseMessage in F%s do', [CanName]));
@@ -528,12 +528,12 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         FieldType :=  Field.FPCType;
 
 
-        if IsSimpleType(Field.FieldType) and not Field.IsRepeated then
+        if IsSimpleType(Field, RelatedProtos) and not Field.IsRepeated then
         begin
           Unitcode.ImplementationCode.Methods.Add(Format('    %d: F%s := Load%s(Stream);' + sLineBreak,
             [Field.FieldNumber, CanName, FieldType]));
         end
-        else if IsSimpleType(Field.FieldType) and Field.IsRepeated then
+        else if IsSimpleType(Field, RelatedProtos) and Field.IsRepeated then
         begin
           CanName := Canonicalize(Field.Name);
           FieldType :=  GetNonRepeatedType4FPC(Field.FieldType);
@@ -554,7 +554,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
                  [Field.FPCType]));
           end;
         end
-        else if not IsSimpleType(Field.FieldType) and not Field.IsRepeated then
+        else if not IsSimpleType(Field, RelatedProtos) and not Field.IsRepeated then
         begin
           Unitcode.ImplementationCode.Methods.Add(Format('    %d:', [Field.FieldNumber]));
           Unitcode.ImplementationCode.Methods.Add       ('    begin');
@@ -565,7 +565,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
                                                          '        Exit(False);', [CanName]));
           Unitcode.ImplementationCode.Methods.Add(       '    end;' + sLineBreak);
         end
-        else if not IsSimpleType(Field.FieldType) and Field.IsRepeated then
+        else if not IsSimpleType(Field, RelatedProtos) and Field.IsRepeated then
         begin
           Unitcode.ImplementationCode.Methods.Add(Format('    %d:', [Field.FieldNumber]));
           Unitcode.ImplementationCode.Methods.Add       ('    begin');
@@ -643,11 +643,11 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
 
   procedure GenerateDeclaration;
   begin
-    if not aField.IsRepeated and IsSimpleType(aField.FieldType) then
+    if not aField.IsRepeated and IsSimpleType(aField, RelatedProtos) then
       UnitCode.InterfaceCode.TypeList.Add(ApplyPattern(MessageClassName, DeclareNonRepeatedSimpleFieldTemplate))
-    else if not aField.IsRepeated and not IsSimpleType(aField.FieldType) then
+    else if not aField.IsRepeated and not IsSimpleType(aField, RelatedProtos) then
       UnitCode.InterfaceCode.TypeList.Add(ApplyPattern(MessageClassName, DeclareNonRepeatedNonSimpleFieldTemplate))
-    else if aField.IsRepeated and not IsSimpleType(aField.FieldType) then
+    else if aField.IsRepeated and not IsSimpleType(aField, RelatedProtos) then
       UnitCode.InterfaceCode.TypeList.Add(ApplyPattern(MessageClassName, DeclareRepeatedNonSimpleFieldTemplate))
     else
       UnitCode.InterfaceCode.TypeList.Add(ApplyPattern(MessageClassName, DeclareRepeatedSimpleFieldTemplate));
@@ -656,7 +656,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
   procedure GenerateImplementation;
   begin
     if not aField.IsRepeated then
-    else if not IsSimpleType(aField.FieldType) then
+    else if not IsSimpleType(aField, RelatedProtos) then
       UnitCode.ImplementationCode.Methods.Add(ApplyPattern(MessageClassName, ImplementRepeatedNonSimpleFieldTemplate))
     else if aField.FPCType = 'Boolean' then
       UnitCode.ImplementationCode.Methods.Add(ApplyPattern(MessageClassName, ImplementRepeatedBooleanTemplate))
@@ -763,30 +763,8 @@ begin
 
   for Message in Proto.Messages do
     GenerateCodeForMessage(Message, UnitCode, '', '  ');
-//  Halt(2);
-  {
-  for Message in Proto.Messages do
-  begin
-    Output.WriteLine(GenerateDeclarationForMessage(Message));
-    Output.WriteLine;
-  end;
 
-  Output.WriteLine(sLineBreak + 'implementation' + sLineBreak);
-  Output.WriteLine('uses strutils;');
-
-  for Message in Proto.Messages do
-  begin
-    Output.WriteLine(sLineBreak + Format(' { T%s }', [Canonicalize(Message.Name)]) +
-      sLineBreak);
-    GenerateImplementationForMessage(Message);
-    Output.WriteLine;
-  end;
-
-  Output.WriteLine('end.');
-
-  Output.Free;
- }
-   OutputStream := TFileStream.Create(ConcatPaths([ExtractFileDir(Proto.InputProtoFilename),
+  OutputStream := TFileStream.Create(ConcatPaths([ExtractFileDir(Proto.InputProtoFilename),
     GetUnitName(Proto.InputProtoFilename) + '.pp']), fmCreate);
   Code := UnitCode.ToString;
   OutputStream.Write(Code[1], Length(Code));
@@ -796,11 +774,12 @@ begin
 
 end;
 
-constructor TPBCodeGeneratorV1.Create(_Proto: TProto);
+constructor TPBCodeGeneratorV1.Create(_Proto: TProto; _RelatedProtos: TProtos);
 begin
   inherited Create;
 
   Proto := _Proto;
+  RelatedProtos := _RelatedProtos;
 
 end;
 
@@ -812,10 +791,11 @@ end;
 
 { TPBBaseCodeGenerator }
 
-class function TPBBaseCodeGenerator.GetCodeGenerator(Proto: TProto
-  ): TPBBaseCodeGenerator;
+class function TPBBaseCodeGenerator.GetCodeGenerator(Proto: TProto;
+  RelatedProtos: TProtos): TPBBaseCodeGenerator;
 begin
-  Result := TPBCodeGeneratorV1.Create(Proto);
+  Result := TPBCodeGeneratorV1.Create(Proto, RelatedProtos);
+
 end;
 
 destructor TPBBaseCodeGenerator.Destroy;
