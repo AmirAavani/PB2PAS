@@ -81,29 +81,21 @@ end;
 
 function IsSimpleType(MessageField: TMessageField; RelatedProtos: TProtos
   ): Boolean;
+var
+  PackageName: AnsiString;
 begin
-  Result := True;
-  case MessageField.FPCType of
-    'double': Exit;
-    'float': Exit;
-    'int16': Exit;
-    'sint16': Exit;
-    'int32': Exit;
-    'sint32': Exit;
-    'fixed32': Exit;
-    'int64': Exit;
-    'sint64': Exit;
-    'fixed64': Exit;
-    'uint16': Exit;
-    'uint32': Exit;
-    'uint64': Exit;
-    'bool': Exit;
-    'string': Exit;
-    'byte': Exit;
-    'bytes': Exit;
-    else
-      Result := False;
+  case MessageField.FieldType of
+    'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
+      , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
+      , 'bool' , 'string' , 'bytes': Exit(True);
   end;
+
+  PackageName := MessageField.PackageName;
+  if PackageName = '' then
+  begin
+
+  end;
+
 end;
 
 function GetTypeSize(TypeName: AnsiString): Integer;

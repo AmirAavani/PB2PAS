@@ -24,7 +24,7 @@ type
 implementation
 
 uses
-  UtilsUnit, strutils, StringUnit;
+  UtilsUnit, StringUnit, ALoggerUnit;
 
 type
   TTokenKind = (ttkStart, ttkDot, ttkOpenBrace, ttkCloseBrace, ttkOpenPar,
@@ -139,10 +139,10 @@ type
     function ParsePackage: AnsiString;
     function ParseOption(EndTokenTypes: array of TTokenKind): TOption;
     function MaybeParseOptions: TOptions;
-    function ParseOneOf: TOneOf;
+    function ParseOneOf(ParentMessage: TMessage): TOneOf;
     function ParseOneOfField: TOneOfField;
-    function ParseMap: TMap;
-    function ParseMessageField: TMessageField;
+    function ParseMap(ParentMessage: TMessage): TMap;
+    function ParseMessageField(ParentMessage: TMessage): TMessageField;
     function ParseConstant: TConstant;
 
   public
@@ -238,7 +238,7 @@ function TTokenizer.GetNextToken: TToken;
     '@': Result.Kind := tckAtSgin;
     '+': Result.Kind := tckPlus
     else
-      WriteLn(Result.ch + ' ' + IntToStr(Ord(Result.Ch)));
+      FatalLn(Result.ch + ' ' + IntToStr(Ord(Result.Ch)));
       raise EInvalidCharacter.Create(Result.ch, Ord(Result.Ch));
     end;
 
@@ -383,7 +383,7 @@ begin
     end
     else
     begin
-      WriteLn(CurrentChar.ch + ' Ch:' + IntToStr(Ord(CurrentChar.Ch)) +
+      FatalLn(CurrentChar.ch + ' Ch:' + IntToStr(Ord(CurrentChar.Ch)) +
         ' Kind:' + IntToStr(Ord(CurrentChar.Kind)) +
         ' Result:' + Result.TokenString);
       raise Exception.Create(CurrentChar.ch + ' ' + IntToStr(Ord(CurrentChar.Ch)) +
@@ -792,6 +792,8 @@ begin
   Options := TOptions.Create;
   Fields := TMessageFields.Create;
 
+  Result := TMessage.Create(Name, Fields, Messages, Options, Enums);
+
   while Token.Kind <> ttkCloseBrace do
   begin
     if Token.TokenString = 'enum' then
@@ -801,22 +803,21 @@ begin
     else if Token.TokenString = 'option' then
       Options.Add(ParseOption(ttkSemiColon))
     else if Token.TokenString = 'oneof' then
-      Fields.Add(ParseOneOf)
+      Fields.Add(ParseOneOf(Result))
     else if Token.TokenString = 'map' then
-      Fields.Add(ParseMap)
+      Fields.Add(ParseMap(Result))
     else if Token.TokenString = 'reserved' then
       raise Exception.Create('NIY reserved')
     else if Token.Kind = ttkSemiColon then
     else
     begin
       Tokenizer.Rewind;
-      Fields.Add(ParseMessageField);
+      Fields.Add(ParseMessageField(Result));
     end;
 
     Token := Tokenizer.GetNextToken;
   end;
 
-  Result := TMessage.Create(Name, Fields, Messages, Options, Enums);
 end;
 
 function TProto3Parser.ParseEnum: TEnum;
@@ -826,14 +827,14 @@ var
   Options: TOptions;
   EnumFields: TEnumFields;
 
-{
+(*
   enum = "enum" enumName enumBody
   enumBody = "{" { option | enumField | emptyStatement } "}"
   enumField = ident "=" intLit [ "[" enumValueOption { ","  enumValueOption } "]" ]";"
   enumValueOption = optionName "=" constant
 
   enumName = Ident
-}
+*)
 begin
   Token := Tokenizer.GetNextToken;
   FName := Token.TokenString;
@@ -975,7 +976,7 @@ begin
 
 end;
 
-function TProto3Parser.ParseOneOf: TOneOf;
+function TProto3Parser.ParseOneOf(ParentMessage: TMessage): TOneOf;
 // oneof = "oneof" oneofName "{" { oneofField | emptyStatement } "}"
 // oneofField = type fieldName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
 var
@@ -1000,7 +1001,7 @@ begin
     Token := Tokenizer.GetNextToken;
   end;
 
-  Result := TOneOf.Create(Name, OneOfFields);
+  Result := TOneOf.Create(Name, OneOfFields, ParentMessage);
 end;
 
 function TProto3Parser.ParseOneOfField: TOneOfField;
@@ -1023,7 +1024,7 @@ begin
 
 end;
 
-function TProto3Parser.ParseMap: TMap;
+function TProto3Parser.ParseMap(ParentMessage: TMessage): TMap;
 var
   KeyType, ValueType: TType;
   Name: AnsiString;
@@ -1046,11 +1047,12 @@ begin
   Options := MaybeParseOptions;
   Tokenizer.Expect(ttkSemiColon);
 
-  Result := TMap.Create(Name, FieldNumber, KeyType, ValueType, Options);
+  Result := TMap.Create(Name, FieldNumber, KeyType, ValueType, Options, ParentMessage);
 
 end;
 
-function TProto3Parser.ParseMessageField: TMessageField;
+function TProto3Parser.ParseMessageField(ParentMessage: TMessage
+  ): TMessageField;
 var
   Name: AnsiString;
   FieldType: TType;
@@ -1080,7 +1082,7 @@ begin
 
   Tokenizer.Expect(ttkSemiColon);
 
-  Result := TMessageField.Create(Name, FieldType, IsRepeated, FieldNumber, Options);
+  Result := TMessageField.Create(Name, FieldType, IsRepeated, FieldNumber, Options, ParentMessage);
 
 end;
 

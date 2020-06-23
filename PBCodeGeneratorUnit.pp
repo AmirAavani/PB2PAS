@@ -20,7 +20,7 @@ type
 
 implementation
 uses
-  StreamUnit, StringUnit, strutils;
+  StreamUnit, StringUnit, ALoggerUnit, strutils;
 
 type
 
@@ -325,7 +325,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       begin
 
         S += Format('a%s: %s; ', [Canonicalize(Field.Name),
-          Field.FPCType]);
+          Field.PackageAndFPCType]);
       end;
       S[Length(S) - 1] := ')';
       S[Length(S)] := ';';
@@ -363,7 +363,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         CreateDeclaration := 'Create(';
         for Field in aMessage.Fields do
           CreateDeclaration += Format('a%s: %s; ', [Canonicalize(Field.Name),
-            Field.FPCType]);
+            Field.PackageAndFPCType]);
         CreateDeclaration[Length(CreateDeclaration) - 1] := ')';
         CreateDeclaration[Length(CreateDeclaration)] := ';';
         Unitcode.ImplementationCode.Methods.Add(Format('constructor %s.%s',
@@ -426,7 +426,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       Unitcode.ImplementationCode.Methods.Add('');
 
       for Field in aMessage.Fields do
-        if Field.FPCType <> 'AnsiString' then
+        if Field.PackageAndFPCType <> 'AnsiString' then
           Unitcode.ImplementationCode.Methods.Add(Format('  Result += F%s.ToString;' + sLineBreak,
               [Canonicalize(Field.Name)]))
         else
@@ -460,7 +460,9 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       for Field in aMessage.Fields do
       begin
         CanName := Canonicalize(Field.Name);
-        FieldType :=  Field.FPCType;
+        if CanName = 'Top18MonthsSources' then
+          DebugLn(CanName);
+        FieldType :=  Field.PackageAndFPCType;
 
         if IsSimpleType(Field, RelatedProtos) and not Field.IsRepeated then
         begin
@@ -477,7 +479,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
               [FieldType, CanName, Field.FieldNumber]))
           else
              raise Exception.Create(Format('Type %s is not supported yet',
-                 [Field.FPCType]));
+                 [Field.PackageAndFPCType]));
           end;
         end
         else if not IsSimpleType(Field, RelatedProtos) and not Field.IsRepeated then
@@ -525,7 +527,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       for Field in aMessage.Fields do
       begin
         CanName := Canonicalize(Field.Name);
-        FieldType :=  Field.FPCType;
+        FieldType :=  Field.PackageAndFPCType;
 
 
         if IsSimpleType(Field, RelatedProtos) and not Field.IsRepeated then
@@ -551,7 +553,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
           end
           else
              raise Exception.Create(Format('Type %s is not supported yet',
-                 [Field.FPCType]));
+                 [Field.PackageAndFPCType]));
           end;
         end
         else if not IsSimpleType(Field, RelatedProtos) and not Field.IsRepeated then
@@ -615,7 +617,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
   begin
     Result := Template;
     Result := StringReplace(Result, '[[Field.Type]]', aField.FieldType, [rfReplaceAll]);
-    Result := StringReplace(Result, '[[Field.FPCType]]', aField.FPCType, [rfReplaceAll]);
+    Result := StringReplace(Result, '[[Field.FPCType]]', aField.PackageAndFPCType, [rfReplaceAll]);
     if aField.PackageName <> '' then
       Result := StringReplace(Result, '[[Field.PackageNameWithDot]]',
         GetUnitName(aField.PackageName) + '.', [rfReplaceAll])
@@ -680,7 +682,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForOneOf(const OneOf: TOneOf; out
     Field: TOneOfField;
 
   begin
-    Unitcode.InterfaceCode.TypeList.Add(Format('%s%s = Class(TBaseOneOf)', [Indent, OneOf.FPCType]));
+    Unitcode.InterfaceCode.TypeList.Add(Format('%s%s = Class(TBaseOneOf)', [Indent, OneOf.PackageAndFPCType]));
     Unitcode.InterfaceCode.TypeList.Add(Format('%sprivate', [Indent]));
 
     for Field in OneOf.Fields do

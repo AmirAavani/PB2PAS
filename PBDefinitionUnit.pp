@@ -42,14 +42,21 @@ type
   end;
 
   TOptions = specialize TObjectList<TOption>;
+
   TMessage = class;
   TImports = class;
+  TProto = class;
+
+  TParent = record
+    Message: TMessage;
+    Proto: TProto;
+  end;
 
   { TMessageField }
 
   TMessageField = class(TObject)
   private
-    Parent: TMessage;
+    FParent: TParent;
     FFieldNumber: Integer;
     FIsRepeated: Boolean;
     FFieldType: TType;
@@ -66,6 +73,7 @@ type
     function GetPackageAndFPCType: AnsiString;
     function GetPackageName: AnsiString; virtual;
   public
+    property Parent: TParent read FParent;
     property IsRepeated: Boolean read GetIsRepeated;
     property FieldType: TType read GetFieldType;
     property FPCType: AnsiString read GetFPCType;
@@ -76,7 +84,7 @@ type
     property Options: TOptions read GetOptions;
 
     constructor Create(_Name: AnsiString; _FieldType: TType; _IsRepeated: Boolean;
-      _FieldNumber: Integer; _Options: TOptions);
+      _FieldNumber: Integer; _Options: TOptions; ParentMessage: TMessage);
     destructor Destroy; override;
 
     function ToXML: AnsiString; virtual;
@@ -160,7 +168,8 @@ type
 
   public
     property Fields: TOneOfFields read OneOfFields;
-    constructor Create(_Name: AnsiString; _Fields: TOneOfFields);
+    constructor Create(_Name: AnsiString; _Fields: TOneOfFields;
+          ParentMessage: TMessage);
     destructor Destroy; override;
 
     function ToXML: AnsiString;override;
@@ -184,7 +193,7 @@ type
     property ValueType: TType read FValueType;
 
     constructor Create(_Name: AnsiString; _FieldNumber: Integer; _KeyType, _ValueType: TType;
-           _Options: TOptions);
+           _Options: TOptions; ParentMessage: TMessage);
     destructor Destroy; override;
 
     function ToXML: AnsiString; override;
@@ -208,6 +217,7 @@ type
     function GetFPCType: AnsiString;
     procedure PrepareForCodeGeneration(AllClassesNames, AllEnumsNames: TStringList);
   public
+    // property Parent:
     property Name: AnsiString read FName;
     property Fields: TMessageFields read FFields;
     property Messages: specialize TObjectList<TMessage> read FMessages;
@@ -384,9 +394,9 @@ begin
 end;
 
 constructor TMap.Create(_Name: AnsiString; _FieldNumber: Integer; _KeyType,
-  _ValueType: TType; _Options: TOptions);
+  _ValueType: TType; _Options: TOptions; ParentMessage: TMessage);
 begin
-   inherited Create(_Name, '', false, _FieldNumber, _Options);
+   inherited Create(_Name, '', false, _FieldNumber, _Options, ParentMessage);
 
    FKeyType := _KeyType;
    FValueType := _ValueType;
@@ -406,9 +416,10 @@ end;
 
 { TOneOf }
 
-constructor TOneOf.Create(_Name: AnsiString; _Fields: TOneOfFields);
+constructor TOneOf.Create(_Name: AnsiString; _Fields: TOneOfFields;
+  ParentMessage: TMessage);
 begin
-  inherited Create(_Name, _Name, False, -1, TOptions.Create);
+  inherited Create(_Name, _Name, False, -1, TOptions.Create, ParentMessage);
 
   OneOfFields := _Fields;
 
@@ -713,7 +724,7 @@ end;
 
 constructor TMessageField.Create(_Name: AnsiString;
   _FieldType: TType; _IsRepeated: Boolean; _FieldNumber: Integer;
-  _Options: TOptions);
+  _Options: TOptions; ParentMessage: TMessage);
 begin
   inherited Create;
 
@@ -722,6 +733,8 @@ begin
   FIsRepeated := _IsRepeated;
   FFieldNumber := _FieldNumber;
   FOptions := _Options;
+  FParent.Message := ParentMessage;
+
 end;
 
 destructor TMessageField.Destroy;
