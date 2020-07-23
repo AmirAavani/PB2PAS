@@ -14,13 +14,20 @@ function Canonicalize(AName: AnsiString): AnsiString;
 function FormatString(const FieldType: AnsiString): AnsiString;
 function GetUnitName(const Filename: AnsiString): AnsiString;
 function GetNonRepeatedType4FPC(TypeName: AnsiString): AnsiString;
-function IsSimpleType(MessageField: TMessageField; RelatedProtos: TProtos): Boolean;
+function IsSimpleType(MessageField: TMessageField; FieldProto: TProto; RelatedProtos: TProtos): Boolean;
+function GetUnitName(MessageField: TMessageField; FieldProto: TProto; RelatedProtos: TProtos): AnsiString;
+function IsAnEnumType(MessageField: TMessageField; FieldProto: TProto; RelatedProtos: TProtos): Boolean;
+function IsOneOfType(MessageField: TMessageField; FieldProto: TProto; RelatedProtos: TProtos): Boolean;
+function GetMessageClassName(aMessage: TMessage): AnsiString;
 
 type
   ENotImplementedYet = class(Exception);
 
 
 implementation
+
+uses
+  ALoggerUnit;
 
 function Canonicalize(AName: AnsiString): AnsiString;
 var
@@ -79,10 +86,13 @@ begin
   end;
 end;
 
-function IsSimpleType(MessageField: TMessageField; RelatedProtos: TProtos
-  ): Boolean;
+function IsSimpleType(MessageField: TMessageField; FieldProto: TProto;
+  RelatedProtos: TProtos): Boolean;
 var
   PackageName: AnsiString;
+  Parent: TParent;
+  P: TProto;
+
 begin
   case MessageField.FieldType of
     'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
@@ -93,9 +103,149 @@ begin
   PackageName := MessageField.PackageName;
   if PackageName = '' then
   begin
+    Parent := MessageField.Parent;
+    while (Parent.Message <> nil) or (Parent.Proto <> nil) do
+    begin
+      if (Parent.Message <> nil) and (Parent.Message.Enums <> nil) then
+        if Parent.Message.Enums.ByName[MessageField.FieldType] <> nil then
+          Exit(True);
+      if (Parent.Proto <> nil) and (Parent.Proto.Enums <> nil) then
+        if Parent.Proto.Enums.ByName[MessageField.FieldType] <> nil then
+          Exit(True);
 
+      if Parent.Message <> nil then
+        Parent := Parent.Message.Parent
+      else
+        Break;
+
+    end;
+
+    if (FieldProto.Enums <> nil) and (FieldProto.Enums.ByName[MessageField.FieldType] <> nil) then
+      Exit(True);
+
+    Exit(False);
   end;
 
+
+
+  for p in RelatedProtos do
+  begin
+    if p.PackageName <> PackageName then
+      Continue;
+    if p.Enums <> nil then
+      Exit(p.Enums.ByName[MessageField.FieldType] <> nil);
+  end;
+
+end;
+
+function GetUnitName(MessageField: TMessageField; FieldProto: TProto;
+  RelatedProtos: TProtos): AnsiString;
+var
+  PackageName: AnsiString;
+  Proto: TProto;
+
+begin
+  PackageName := MessageField.PackageName;
+
+  if PackageName = '' then
+    Exit('');
+
+  for Proto in RelatedProtos do
+    if Proto.PackageName = PackageName then
+      Exit(Proto.OutputUnitName);
+
+  Result := '';
+end;
+
+function IsAnEnumType(MessageField: TMessageField; FieldProto: TProto;
+  RelatedProtos: TProtos): Boolean;
+var
+  PackageName: AnsiString;
+  Parent: TParent;
+  P: TProto;
+
+begin
+  case MessageField.FieldType of
+    'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
+      , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
+      , 'bool' , 'string' , 'bytes': Exit(False);
+  end;
+
+  PackageName := MessageField.PackageName;
+  if PackageName = '' then
+  begin
+    Parent := MessageField.Parent;
+    while (Parent.Message <> nil) or (Parent.Proto <> nil) do
+    begin
+      if (Parent.Message <> nil) and (Parent.Message.Enums <> nil) then
+        if Parent.Message.Enums.ByName[MessageField.FieldType] <> nil then
+          Exit(True);
+      if (Parent.Proto <> nil) and (Parent.Proto.Enums <> nil) then
+        if Parent.Proto.Enums.ByName[MessageField.FieldType] <> nil then
+          Exit(True);
+
+      if Parent.Message <> nil then
+        Parent := Parent.Message.Parent
+      else
+        Break;
+
+    end;
+
+    if (FieldProto.Enums <> nil) and (FieldProto.Enums.ByName[MessageField.FieldType] <> nil) then
+      Exit(True);
+
+    Exit(False);
+  end;
+
+  for p in RelatedProtos do
+  begin
+    if p.PackageName <> PackageName then
+      Continue;
+    if p.Enums <> nil then
+      Exit(p.Enums.ByName[MessageField.FieldType] <> nil);
+  end;
+
+  Result := False;
+end;
+
+function IsOneOfType(MessageField: TMessageField; FieldProto: TProto;
+  RelatedProtos: TProtos): Boolean;
+var
+  PackageName: AnsiString;
+  Parent: TParent;
+  P: TProto;
+
+begin
+  case MessageField.FieldType of
+    'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
+      , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
+      , 'bool' , 'string' , 'bytes': Exit(False);
+  end;
+
+  PackageName := MessageField.PackageName;
+  if PackageName = '' then
+  begin
+    if MessageField is TOneOf then
+      Exit;
+  end;
+
+  Result := False;
+
+end;
+
+function GetMessageClassName(aMessage: TMessage): AnsiString;
+var
+  Parent: TParent;
+
+begin
+  Result := Format('T%s', [Canonicalize(aMessage.Name)]);
+  Parent := aMessage.Parent;
+
+  while Parent.Message <> nil do
+  begin
+    Result := Format('T%s.%s', [Canonicalize(Parent.Message.Name), Result]);
+    Parent := Parent.Message.Parent;
+  end;
 end;
 
 function GetTypeSize(TypeName: AnsiString): Integer;

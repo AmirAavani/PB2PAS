@@ -133,7 +133,7 @@ type
   private
     function ParseImport: AnsiString;
     function ParseSyntax: Boolean;
-    function ParseMessage: TMessage;
+    function ParseMessage(Parent: TParent): TMessage;
     function ParseEnum: TEnum;
     function ParseEnumField(EnumName: AnsiString): TEnumField;
     function ParsePackage: AnsiString;
@@ -766,7 +766,7 @@ begin
 
 end;
 
-function TProto3Parser.ParseMessage: TMessage;
+function TProto3Parser.ParseMessage(Parent: TParent): TMessage;
 var
   Token: TToken;
   Name: AnsiString;
@@ -792,14 +792,14 @@ begin
   Options := TOptions.Create;
   Fields := TMessageFields.Create;
 
-  Result := TMessage.Create(Name, Fields, Messages, Options, Enums);
+  Result := TMessage.Create(Name, Fields, Messages, Options, Enums, Parent);
 
   while Token.Kind <> ttkCloseBrace do
   begin
     if Token.TokenString = 'enum' then
       Enums.Add(ParseEnum)
     else if Token.TokenString = 'message' then
-      Messages.Add(Self.ParseMessage)
+      Messages.Add(Self.ParseMessage(CreateParent(Result, Parent.Proto)))
     else if Token.TokenString = 'option' then
       Options.Add(ParseOption(ttkSemiColon))
     else if Token.TokenString = 'oneof' then
@@ -1245,7 +1245,7 @@ function TProto3Parser.ParseProto: TProto;
 var
   Token: TToken;
   Imports: TImports;
-  Packages: TPackages;
+  PackageName: AnsiString;
   Options: TOptions;
   Messages: TMessages;
   Enums: TEnums;
@@ -1257,7 +1257,6 @@ begin
 
   Token := Tokenizer.GetNextToken;
   Imports := TImports.Create;
-  Packages := TPackages.Create;
   Options := TOptions.Create;
   Messages := TMessages.Create;
   Enums := TEnums.Create;
@@ -1267,11 +1266,11 @@ begin
     if Token.TokenString = 'import' then
       Imports.Add(ParseImport)
     else if Token.TokenString = 'package' then
-      Packages.Add(ParsePackage)
+      PackageName := ParsePackage
     else if Token.TokenString = 'option' then
       Options.Add(ParseOption(ttkSemiColon))
     else if Token.TokenString = 'message' then
-      Messages.Add(ParseMessage)
+      Messages.Add(ParseMessage(CreateParent(nil, Result)))
     else if Token.TokenString = 'enum' then
       Enums.Add(ParseEnum)
     else if Token.TokenString = 'service' then
@@ -1281,7 +1280,8 @@ begin
     Token := Tokenizer.GetNextToken;
   end;
 
-  Result := TProto3.Create(InputFilename, '3', Imports, Packages, Options, Messages, Enums);
+  Result := TProto3.Create(InputFilename, '3', Imports, PackageName, Options, Messages, Enums);
+
 
 end;
 

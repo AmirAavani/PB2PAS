@@ -16,6 +16,7 @@ type
   TUInt32s = specialize TSimpleTypeList<UInt32>;
   TUInt64s = specialize TSimpleTypeList<UInt64>;
   TBooleans = specialize TSimpleTypeList<Boolean>;
+  TStringList = specialize TSimpleTypeList<AnsiString>;
 
   { TBaseMessage }
 

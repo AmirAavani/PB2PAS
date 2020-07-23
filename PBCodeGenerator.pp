@@ -28,7 +28,7 @@ procedure GenerateCode(InputFilename: AnsiString);
     Parser := TBaseProtoParser.GetParser(ProtoFile);
 
     Proto := Parser.ParseProto;
-    WriteLn(Format('<OutputUnitName Name = "%s" />', [Proto.UnitName]));
+    WriteLn(Format('<OutputUnitName Name = "%s" />', [Proto.OutputUnitName]));
     WriteLn(Proto.ToXML);
 
     Parser.Free;
