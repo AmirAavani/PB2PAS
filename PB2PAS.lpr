@@ -4,7 +4,11 @@ program PB2PAS;
 {$MODESWITCH ADVANCEDRECORDS}
 uses
   Classes, sysutils, ParameterManagerUnit, PBParserUnit, StringUnit, UtilsUnit,
-  PBDefinitionUnit, PBCodeGenerator, PBCodeGeneratorUnit, ALoggerUnit;
+  PBDefinitionUnit, PBCodeGenerator, PBCodeGeneratorUnit, ALoggerUnit, fgl;
+
+
+type
+  TIntIntMap = specialize TFPGMap<Integer, Integer>;
 
 begin
   WriteLn('<A>');

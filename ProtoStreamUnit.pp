@@ -103,8 +103,12 @@ type
     procedure WriteFloat(FieldNumber: Integer; Value: Single);
     (* Write a int64 field, including tag. *)
     procedure WriteInt64(FieldNumber: Integer; Value: Int64);
+    (* Write a sint64 field, including tag. *)
+    procedure WriteSInt64(FieldNumber: Integer; Value: Integer);
     (* Write a int32 field, including tag. *)
     procedure WriteInt32(FieldNumber: Integer; Value: Integer);
+    (* Write a sint32 field, including tag. *)
+    procedure WriteSInt32(FieldNumber: Integer; Value: Integer);
     (* Write a UInt64 field, including tag. *)
     procedure WriteUInt64(FieldNumber: Integer; Value: UInt64);
     (* Write a UInt32 field, including tag. *)
@@ -548,7 +552,7 @@ begin
   until Value = 0;
 end;
 
-procedure TProtoStreamWriter.WriteRawVarint64(Value: int64);
+procedure TProtoStreamWriter.WriteRawVarint64(Value: Int64);
 var
   b: Byte;
 
@@ -594,10 +598,20 @@ begin
 
 end;
 
-procedure TProtoStreamWriter.WriteInt64(FieldNumber: Integer; Value: int64);
+procedure TProtoStreamWriter.WriteInt64(FieldNumber: Integer; Value: Int64);
 begin
   WriteTag(FieldNumber, WIRETYPE_VARINT);
-  WriteRawVarint64(Value);
+  WriteRawVarint64((Value shl 1) xor (Value shr 63));
+
+end;
+
+procedure TProtoStreamWriter.WriteSInt64(FieldNumber: Integer; Value: Integer);
+begin
+  WriteLn('NIY WriteSInt32');
+  Halt(2);
+
+  WriteTag(FieldNumber, WIRETYPE_VARINT);
+  WriteRawVarint32(Value);
 
 end;
 
@@ -608,9 +622,18 @@ begin
 
 end;
 
+procedure TProtoStreamWriter.WriteSInt32(FieldNumber: Integer; Value: Integer);
+begin
+  WriteLn('NIY WriteSInt32');
+  Halt(2);
+  WriteTag(FieldNumber, WIRETYPE_VARINT);
+  WriteRawVarint32((Value shl 1) xor (Value shr 31));
+
+end;
+
 procedure TProtoStreamWriter.WriteUInt64(FieldNumber: Integer; Value: UInt64);
 begin
-  Self.WriteInt64(FieldNumber, Value);
+  WriteInt64(FieldNumber, Value);
 
 end;
 
@@ -620,7 +643,7 @@ begin
 
 end;
 
-procedure TProtoStreamWriter.WriteFixed64(FieldNumber: Integer; Value: int64);
+procedure TProtoStreamWriter.WriteFixed64(FieldNumber: Integer; Value: Int64);
 begin
   WriteTag(fieldNumber, WIRETYPE_FIXED64);
   WriteRawData(@value, SizeOf(value));
@@ -634,7 +657,7 @@ begin
 
 end;
 
-procedure TProtoStreamWriter.WriteBoolean(FieldNumber: Integer; Value: boolean);
+procedure TProtoStreamWriter.WriteBoolean(FieldNumber: Integer; Value: Boolean);
 begin
   WriteTag(FieldNumber, WIRETYPE_VARINT);
   WriteRawByte(Ord(Value));

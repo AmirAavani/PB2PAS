@@ -8,15 +8,108 @@ uses
   Classes, SysUtils, fgl, ProtoHelperListsUnit, ProtoStreamUnit;
 
 type
-  TBytes = specialize TSimpleTypeList<Byte>;
-  TSingles = specialize TSimpleTypeList<Single>;
-  TDoubles = specialize TSimpleTypeList<Double>;
-  TInt32s = specialize TSimpleTypeList<Int32>;
-  TInt64s = specialize TSimpleTypeList<Int64>;
-  TUInt32s = specialize TSimpleTypeList<UInt32>;
-  TUInt64s = specialize TSimpleTypeList<UInt64>;
-  TBooleans = specialize TSimpleTypeList<Boolean>;
-  TStringList = specialize TSimpleTypeList<AnsiString>;
+
+  { TBytes }
+
+  TBytes = class(specialize TSimpleTypeList<Byte>)
+  public
+    constructor Create;
+
+  protected
+    function SimpleObjectToString(Obj: Byte): AnsiString; override;
+
+  end;
+
+  { TSingles }
+
+  TSingles = class(specialize TSimpleTypeList<Single>)
+  public
+    constructor Create;
+
+  protected
+    function SimpleObjectToString(Obj: Single): AnsiString; override;
+
+  end;
+
+  { TDoubles }
+
+  TDoubles = class(specialize TSimpleTypeList<Double>)
+  public
+    constructor Create;
+
+  protected
+    function SimpleObjectToString(Obj: Double): AnsiString; override;
+
+  end;
+
+  { TInt32s }
+
+  TInt32s = class(specialize TSimpleTypeList<Int32>)
+  public
+    constructor Create;
+
+  protected
+    function SimpleObjectToString(Obj: Int32): AnsiString; override;
+
+  end;
+
+  { TInt64s }
+
+  TInt64s = class(specialize TSimpleTypeList<Int64>)
+  public
+    constructor Create;
+
+  protected
+    function SimpleObjectToString(Obj: Int64): AnsiString; override;
+
+  end;
+
+  { TUInt32s }
+
+  TUInt32s = class(specialize TSimpleTypeList<UInt32>)
+  public
+    constructor Create;
+
+  protected
+    function SimpleObjectToString(Obj: UInt32): AnsiString; override;
+
+  end;
+
+  { TUInt64s }
+
+  TUInt64s = class(specialize TSimpleTypeList<UInt64>)
+  public
+    constructor Create;
+
+  protected
+    function SimpleObjectToString(Obj: UInt64): AnsiString; override;
+
+  end;
+
+  { TBooleans }
+
+  TBooleans = class(specialize TSimpleTypeList<Boolean>)
+  public
+    constructor Create;
+
+  protected
+    function SimpleObjectToString(Obj: Boolean): AnsiString; override;
+
+  end;
+
+  { TStringList }
+
+  TStringList = class(specialize TSimpleTypeList<AnsiString>)
+  public
+    constructor Create;
+
+  protected
+    function SimpleObjectToString(Obj: AnsiString): AnsiString; override;
+
+  end;
+
+  TBaseMessage = class;
+  TBaseOneOf = class;
 
   { TBaseMessage }
 
@@ -25,84 +118,6 @@ type
     function ReadRepeatedLength(Stream: TProtoStreamReader): UInt32;
 
   protected
-    procedure SaveSingle(Stream: TProtoStreamWriter;
-        const Data: Single; const TagID: Integer);
-    procedure SaveDouble(Stream: TProtoStreamWriter;
-        const Data: Double; const TagID: Integer);
-    procedure SaveInt32(Stream: TProtoStreamWriter;
-        const Data: Int32; const TagID: Integer);
-    procedure SaveInt64(Stream: TProtoStreamWriter;
-        const Data: Int64; const TagID: Integer);
-    procedure SaveUInt32(Stream: TProtoStreamWriter;
-        const Data: UInt32; const TagID: Integer);
-    procedure SaveUInt64(Stream: TProtoStreamWriter;
-        const Data: UInt64; const TagID: Integer);
-    procedure SaveAnsiString(Stream: TProtoStreamWriter; const Data: AnsiString;
-      const TagID: Integer);
-    procedure SaveBoolean(Stream: TProtoStreamWriter; const Data: Boolean;
-        const TagID: Integer);
-
-    function LoadSingle(Stream: TProtoStreamReader): Single;
-    function LoadDouble(Stream: TProtoStreamReader): Double;
-    function LoadInt32(Stream: TProtoStreamReader): Int32;
-    function LoadInt64(Stream: TProtoStreamReader): Int64;
-    function LoadUInt32(Stream: TProtoStreamReader): UInt32;
-    function LoadUInt64(Stream: TProtoStreamReader): UInt64;
-    function LoadAnsiString(Stream: TProtoStreamReader): AnsiString;
-    function LoadBoolean(Stream: TProtoStreamReader): Boolean;
-
-    procedure SaveRepeatedSingle(Stream: TProtoStreamWriter;
-    const Data: TSingles;
-    const TagID: Integer);
-    procedure SaveRepeatedDouble(Stream: TProtoStreamWriter;
-        const Data: TDoubles;
-        const TagID: Integer);
-    procedure SaveRepeatedInt32(Stream: TProtoStreamWriter;
-        const Data: TInt32s;
-        const TagID: Integer);
-    procedure SaveRepeatedInt64(Stream: TProtoStreamWriter;
-        const Data: TInt64s;
-        const TagID: Integer);
-    procedure SaveRepeatedUInt32(Stream: TProtoStreamWriter;
-        const Data: TUInt32s;
-        const TagID: Integer);
-    procedure SaveRepeatedUInt64(Stream: TProtoStreamWriter;
-        const Data: TUInt64s;
-        const TagID: Integer);
-    procedure SaveRepeatedAnsiString(
-        Stream: TProtoStreamWriter;
-       const Data: TStringList;
-      const TagID: Integer);
-    procedure SaveRepeatedBoolean(Stream: TProtoStreamWriter;
-        const Data: TBooleans;
-        const TagID: Integer);
-
-    function LoadRepeatedSingle(Stream: TProtoStreamReader;
-        Data: TSingles): Boolean;
-    function LoadRepeatedDouble(Stream: TProtoStreamReader;
-        Data: TDoubles): Boolean;
-    function LoadRepeatedInt32(Stream: TProtoStreamReader;
-        Data: TInt32s): Boolean;
-    function LoadRepeatedInt64(Stream: TProtoStreamReader;
-        Data: TInt64s): Boolean;
-    function LoadRepeatedUInt32(Stream: TProtoStreamReader;
-        Data: TUInt32s): Boolean;
-    function LoadRepeatedUInt64(Stream: TProtoStreamReader;
-        Data: TUInt64s): Boolean;
-    function LoadRepeatedAnsiString(Stream: TProtoStreamReader;
-         Data: TStringList): Boolean;
-    function LoadRepeatedBoolean(Stream: TProtoStreamReader;
-        Data: TBooleans): Boolean;
-
-    procedure SaveMessage(Stream: TProtoStreamWriter;
-        const Data: TBaseMessage;
-        const TagID: Integer);
-    function LoadMessage(Stream: TProtoStreamReader;
-        const Data: TBaseMessage): Boolean;
-
-    procedure SaveRepeatedMessage(Stream: TProtoStreamWriter;
-        const Data: specialize TObjectList<TBaseMessage>;
-        const TagID: Integer);
 
     procedure SaveToStream(Stream: TProtoStreamWriter);  virtual; abstract;
     function LoadFromStream(Stream: TProtoStreamReader; Len: Integer): Boolean;  virtual; abstract;
@@ -119,20 +134,27 @@ type
 
   { TBaseOneOf }
 
-  TBaseOneOf = class(specialize TFPGList<TObject>)
-  private
-    ObjectIndex: Integer;
+  TBaseOneOf = class(TObject)
+  protected
+    _ObjectIndex: Integer;
+    _Data: Pointer;
 
-    function GetObjectByIndex(Index: Integer): TObject;
-    procedure SetObjectByIndex(Index: Integer; AValue: TObject);
+    function GetPointerByIndex(Index: Integer): Pointer;
+    procedure SetPointerByIndex(Index: Integer; AValue: Pointer);
 
   protected
-    property ObjectByIndex[Index: Integer]: TOBject read GetObjectByIndex write SetObjectByIndex;
+    property PointerByIndex[Index: Integer]: Pointer read GetPointerByIndex
+  write SetPointerByIndex;
 
+    procedure SaveToStream(Stream: TProtoStreamWriter);  virtual; abstract;
+    function LoadFromStream(Stream: TProtoStreamReader; Len: Integer): Boolean;  virtual; abstract;
   public
     constructor Create(NumObject: Integer);
     destructor Destroy; override;
 
+    function LoadFromString(Str: AnsiString): Boolean; virtual;
+    function LoadFromStream(Stream: TStream): Boolean; virtual;
+    procedure SaveToStream(Stream: TStream);  virtual; abstract;
   end;
 
   { EBaseOneOf }
@@ -142,7 +164,213 @@ type
     constructor CreateTwoValueAreSet;
   end;
 
+procedure SaveSingle(Stream: TProtoStreamWriter;
+    const Data: Single; const TagID: Integer);
+procedure SaveDouble(Stream: TProtoStreamWriter;
+    const Data: Double; const TagID: Integer);
+procedure SaveInt32(Stream: TProtoStreamWriter;
+    const Data: Int32; const TagID: Integer);
+procedure SaveInt64(Stream: TProtoStreamWriter;
+    const Data: Int64; const TagID: Integer);
+procedure SaveUInt32(Stream: TProtoStreamWriter;
+    const Data: UInt32; const TagID: Integer);
+procedure SaveUInt64(Stream: TProtoStreamWriter;
+    const Data: UInt64; const TagID: Integer);
+procedure SaveAnsiString(Stream: TProtoStreamWriter; const Data: AnsiString;
+  const TagID: Integer);
+procedure SaveBoolean(Stream: TProtoStreamWriter; const Data: Boolean;
+    const TagID: Integer);
+
+function LoadSingle(Stream: TProtoStreamReader): Single;
+function LoadDouble(Stream: TProtoStreamReader): Double;
+function LoadInt32(Stream: TProtoStreamReader): Int32;
+function LoadInt64(Stream: TProtoStreamReader): Int64;
+function LoadUInt32(Stream: TProtoStreamReader): UInt32;
+function LoadUInt64(Stream: TProtoStreamReader): UInt64;
+function LoadAnsiString(Stream: TProtoStreamReader): AnsiString;
+function LoadBoolean(Stream: TProtoStreamReader): Boolean;
+
+procedure SaveRepeatedSingle(Stream: TProtoStreamWriter;
+  const Data: TSingles;
+  const TagID: Integer);
+procedure SaveRepeatedDouble(Stream: TProtoStreamWriter;
+    const Data: TDoubles;
+    const TagID: Integer);
+procedure SaveRepeatedInt32(Stream: TProtoStreamWriter;
+    const Data: TInt32s;
+    const TagID: Integer);
+procedure SaveRepeatedInt64(Stream: TProtoStreamWriter;
+    const Data: TInt64s;
+    const TagID: Integer);
+procedure SaveRepeatedUInt32(Stream: TProtoStreamWriter;
+    const Data: TUInt32s;
+    const TagID: Integer);
+procedure SaveRepeatedUInt64(Stream: TProtoStreamWriter;
+    const Data: TUInt64s;
+    const TagID: Integer);
+procedure SaveRepeatedAnsiString(
+    Stream: TProtoStreamWriter;
+   const Data: TStringList;
+  const TagID: Integer);
+procedure SaveRepeatedBoolean(Stream: TProtoStreamWriter;
+    const Data: TBooleans;
+    const TagID: Integer);
+
+function LoadRepeatedSingle(Stream: TProtoStreamReader;
+    Data: TSingles): Boolean;
+function LoadRepeatedDouble(Stream: TProtoStreamReader;
+    Data: TDoubles): Boolean;
+function LoadRepeatedInt32(Stream: TProtoStreamReader;
+    Data: TInt32s): Boolean;
+function LoadRepeatedInt64(Stream: TProtoStreamReader;
+    Data: TInt64s): Boolean;
+function LoadRepeatedUInt32(Stream: TProtoStreamReader;
+    Data: TUInt32s): Boolean;
+function LoadRepeatedUInt64(Stream: TProtoStreamReader;
+    Data: TUInt64s): Boolean;
+function LoadRepeatedAnsiString(Stream: TProtoStreamReader;
+     Data: TStringList): Boolean;
+function LoadRepeatedBoolean(Stream: TProtoStreamReader;
+    Data: TBooleans): Boolean;
+
+procedure SaveMessage(Stream: TProtoStreamWriter;
+    const Data: TBaseMessage;
+    const TagID: Integer);
+function LoadMessage(Stream: TProtoStreamReader;
+    const Data: TBaseMessage): Boolean;
+generic procedure SaveRepeatedMessage<TMessage>(Stream: TProtoStreamWriter;
+    const Data: specialize TObjectList<TMessage>;
+    const TagID: Integer);
+generic function LoadRepeatedMessage<TMessage>(Stream: TProtoStreamReader;
+    Data: specialize TObjectList<TMessage>): Boolean;
+
+
 implementation
+
+{ TBytes }
+
+constructor TBytes.Create;
+begin
+  inherited Create;
+
+end;
+
+function TBytes.SimpleObjectToString(Obj: Byte): AnsiString;
+begin
+  Result := IntToStr(Obj);
+
+end;
+
+{ TSingles }
+
+constructor TSingles.Create;
+begin
+  inherited Create;
+
+end;
+
+function TSingles.SimpleObjectToString(Obj: Single): AnsiString;
+begin
+  Result := FloatToStr(Obj);
+
+end;
+
+{ TDoubles }
+
+constructor TDoubles.Create;
+begin
+  inherited Create;
+
+end;
+
+function TDoubles.SimpleObjectToString(Obj: Double): AnsiString;
+begin
+  Result := FloatToStr(Obj);
+
+end;
+
+{ TInt32s }
+
+constructor TInt32s.Create;
+begin
+  inherited Create;
+
+end;
+
+function TInt32s.SimpleObjectToString(Obj: Int32): AnsiString;
+begin
+  Result := IntToStr(Obj);
+
+end;
+
+{ TInt64s }
+
+constructor TInt64s.Create;
+begin
+  inherited Create;
+
+end;
+
+function TInt64s.SimpleObjectToString(Obj: Int64): AnsiString;
+begin
+  Result := IntToStr(Obj);
+
+end;
+
+{ TUInt32s }
+
+constructor TUInt32s.Create;
+begin
+  inherited Create;
+
+end;
+
+function TUInt32s.SimpleObjectToString(Obj: UInt32): AnsiString;
+begin
+  Result := UIntToStr(Obj);
+
+end;
+
+{ TUInt64s }
+
+constructor TUInt64s.Create;
+begin
+  inherited Create;
+
+end;
+
+function TUInt64s.SimpleObjectToString(Obj: UInt64): AnsiString;
+begin
+  Result := UIntToStr(Obj);
+
+end;
+
+{ TBooleans }
+
+constructor TBooleans.Create;
+begin
+  // ??
+  inherited Create;
+
+end;
+
+function TBooleans.SimpleObjectToString(Obj: Boolean): AnsiString;
+begin
+  Result := BoolToStr(Obj, 'True', 'False');
+end;
+
+{ TStringList }
+
+constructor TStringList.Create;
+begin
+  inherited Create;
+
+end;
+
+function TStringList.SimpleObjectToString(Obj: AnsiString): AnsiString;
+begin
+  Result := Obj;
+end;
 
 { EBaseOneOf }
 
@@ -154,76 +382,95 @@ end;
 
 { TBaseOneOf }
 
-function TBaseOneOf.GetObjectByIndex(Index: Integer): TObject;
+function TBaseOneOf.GetPointerByIndex(Index: Integer): Pointer;
 begin
-  Result := Self[Index];
+  if Index = _ObjectIndex then
+    Exit(_Data);
+
+  Result := nil;
 
 end;
 
-procedure TBaseOneOf.SetObjectByIndex(Index: Integer; AValue: TObject);
+procedure TBaseOneOf.SetPointerByIndex(Index: Integer; AValue: Pointer);
 begin
-  if ObjectIndex = -1 then
+  if _ObjectIndex = -1 then
   begin
-    Self[Index] := AValue;
-    ObjectIndex := Index;
+    _Data := AValue;
+    _ObjectIndex := Index;
     Exit;
 
   end;
 
   if AValue = nil then
   begin
-    ObjectIndex := -1;
-    Self[Index] := AValue;
+    _ObjectIndex := -1;
+    _Data := AValue;
     Exit;
 
   end;
 
-  if Index <> ObjectIndex then
+  if Index <> _ObjectIndex then
     raise EBaseOneOf.CreateTwoValueAreSet;
-  Self[Index] := AValue;
 end;
 
 constructor TBaseOneOf.Create(NumObject: Integer);
 begin
   inherited Create;
 
-  Self.Count := NumObject;
-  ObjectIndex := -1;
+  _ObjectIndex := -1;
 end;
 
 destructor TBaseOneOf.Destroy;
-var
-  Obj: TObject;
-
 begin
-  for Obj in Self do
-    Obj.Free;
 
   inherited Destroy;
 end;
 
+function TBaseOneOf.LoadFromString(Str: AnsiString): Boolean;
+begin
+  Result := self.LoadFromStream(TStringStream.Create(Str));
+
+end;
+
+function TBaseOneOf.LoadFromStream(Stream: TStream): Boolean;
+var
+  ProtoStream: TProtoStreamReader;
+
+begin
+  ProtoStream := TProtoStreamReader.Create(Stream);
+
+  Result := Self.LoadFromStream(ProtoStream, Stream.Size);
+
+  ProtoStream.Free;
+
+end;
+
 { TBaseMessage }
 
-procedure TBaseMessage.SaveRepeatedAnsiString(Stream: TProtoStreamWriter;
+procedure SaveRepeatedAnsiString(Stream: TProtoStreamWriter;
   const Data: TStringList; const TagID: Integer);
 var
   AnsiStringData: AnsiString;
-  i: Integer;
+  SizeNode: TLinkListNode;
 
 begin
   if Data = nil then
     Exit;
 
-  for i := 0 to Data.Count - 1 do
+  Stream.WriteTag(TagID, 2);
+  SizeNode := Stream.AddIntervalNode;
+  for AnsiStringData in Data do
   begin
-    AnsiStringData := Data[i];
-    Stream.WriteString(TagID, AnsiStringData);
+    Stream.WriteRawVarint32(Length(AnsiStringData));
+    Stream.WriteRawData(PChar(AnsiStringData), Length(AnsiStringData));
 
   end;
 
+  SizeNode.WriteLength(SizeNode.TotalSize);
+
 end;
 
-procedure TBaseMessage.SaveRepeatedBoolean(Stream: TProtoStreamWriter;
+procedure SaveRepeatedBoolean(Stream: TProtoStreamWriter;
   const Data: TBooleans; const TagID: Integer);
 var
   SingleData: Boolean;
@@ -242,7 +489,7 @@ begin
 
 end;
 
-function TBaseMessage.LoadRepeatedSingle(Stream: TProtoStreamReader;
+function LoadRepeatedSingle(Stream: TProtoStreamReader;
   Data: TSingles): Boolean;
 var
   Len: uInt32;
@@ -264,7 +511,7 @@ begin
 
 end;
 
-function TBaseMessage.LoadRepeatedDouble(Stream: TProtoStreamReader;
+function LoadRepeatedDouble(Stream: TProtoStreamReader;
   Data: TDoubles): Boolean;
 var
   Len: uInt32;
@@ -285,7 +532,7 @@ begin
   Result := StartPos + Len = Stream.Position;
 end;
 
-function TBaseMessage.LoadRepeatedInt32(Stream: TProtoStreamReader;
+function LoadRepeatedInt32(Stream: TProtoStreamReader;
   Data: TInt32s): Boolean;
 var
   Len: uInt32;
@@ -306,7 +553,7 @@ begin
   Result := StartPos + Len = Stream.Position;
 end;
 
-function TBaseMessage.LoadRepeatedInt64(Stream: TProtoStreamReader;
+function LoadRepeatedInt64(Stream: TProtoStreamReader;
   Data: TInt64s): Boolean;
 var
   Len: uInt32;
@@ -327,7 +574,7 @@ begin
   Result := StartPos + Len = Stream.Position;
 end;
 
-function TBaseMessage.LoadRepeatedUInt32(Stream: TProtoStreamReader;
+function LoadRepeatedUInt32(Stream: TProtoStreamReader;
   Data: TUInt32s): Boolean;
 var
   Len: uInt32;
@@ -348,7 +595,7 @@ begin
   Result := StartPos + Len = Stream.Position;
 end;
 
-function TBaseMessage.LoadRepeatedUInt64(Stream: TProtoStreamReader;
+function LoadRepeatedUInt64(Stream: TProtoStreamReader;
   Data: TUInt64s): Boolean;
 var
   Len: uInt32;
@@ -369,7 +616,7 @@ begin
   Result := StartPos + Len = Stream.Position;
 end;
 
-function TBaseMessage.LoadRepeatedAnsiString(Stream: TProtoStreamReader;
+function LoadRepeatedAnsiString(Stream: TProtoStreamReader;
   Data: TStringList): Boolean;
 var
   Len: uInt32;
@@ -390,7 +637,7 @@ begin
   Result := StartPos + Len = Stream.Position;
 end;
 
-function TBaseMessage.LoadRepeatedBoolean(Stream: TProtoStreamReader;
+function LoadRepeatedBoolean(Stream: TProtoStreamReader;
   Data: TBooleans): Boolean;
 var
   Len: uInt32;
@@ -411,7 +658,7 @@ begin
   Result := StartPos + Len = Stream.Position;
 end;
 
-procedure TBaseMessage.SaveMessage(Stream: TProtoStreamWriter;
+procedure SaveMessage(Stream: TProtoStreamWriter;
   const Data: TBaseMessage; const TagID: Integer);
 var
   SizeNode: TLinkListNode;
@@ -420,7 +667,8 @@ begin
   if Data = nil then
     Exit;
 
-  Stream.WriteTag(TagID, WIRETYPE_LENGTH_DELIMITED);
+  if TagID <> -1 then
+    Stream.WriteTag(TagID, WIRETYPE_LENGTH_DELIMITED);
   SizeNode := Stream.AddIntervalNode;
   Data.SaveToStream(Stream);
 
@@ -428,7 +676,7 @@ begin
 
 end;
 
-function TBaseMessage.LoadMessage(Stream: TProtoStreamReader;
+function LoadMessage(Stream: TProtoStreamReader;
   const Data: TBaseMessage): Boolean;
 var
   Len: Integer;
@@ -440,23 +688,49 @@ begin
 
 end;
 
-procedure TBaseMessage.SaveRepeatedMessage(Stream: TProtoStreamWriter;
-  const Data: specialize TObjectList<TBaseMessage>;
-  const TagID: Integer);
+generic procedure SaveRepeatedMessage<TMessage>(Stream: TProtoStreamWriter;
+    const Data: specialize TObjectList<TMessage>;
+    const TagID: Integer);
 var
-  BaseData: TBaseMessage;
+  Message: TMessage;
+  SizeNode: TLinkListNode;
 
 begin
   if Data = nil then
     Exit;
 
-  for BaseData in Data do
-    BaseData.SaveToStream(Stream);
+  Stream.WriteTag(TagID, 2);
+  SizeNode := Stream.AddIntervalNode;
+  for Message in Data do
+    SaveMessage(Stream, Message, -1);
 
+  SizeNode.WriteLength(SizeNode.TotalSize);
 end;
 
-procedure TBaseMessage.SaveRepeatedSingle(Stream: TProtoStreamWriter;
-  const Data: specialize TSimpleTypeList<Single>; const TagID: Integer);
+generic function LoadRepeatedMessage<TMessage>(Stream: TProtoStreamReader;
+    Data: specialize TObjectList<TMessage>): Boolean;
+var
+  Len: uInt32;
+  NewDatum: TMessage;
+  StartPos: Integer;
+
+begin
+  Len := Stream.ReadUInt32;
+  StartPos := Stream.Position;
+
+  while Stream.Position < StartPos + Len do
+  begin
+    NewDatum := TMessage.Create;
+    LoadMessage(Stream, NewDatum);
+    Data.Add(NewDatum);
+
+  end;
+
+  Result := StartPos + Len = Stream.Position;
+end;
+
+procedure SaveRepeatedSingle(Stream: TProtoStreamWriter;
+  const Data: TSingles; const TagID: Integer);
 var
   SingleData: Single;
   SizeNode: TLinkListNode;
@@ -474,8 +748,8 @@ begin
 
 end;
 
-procedure TBaseMessage.SaveRepeatedDouble(Stream: TProtoStreamWriter;
-  const Data: specialize TSimpleTypeList<Double>; const TagID: Integer);
+procedure SaveRepeatedDouble(Stream: TProtoStreamWriter;
+  const Data: TDoubles; const TagID: Integer);
 var
   SingleData: Double;
   SizeNode: TLinkListNode;
@@ -493,8 +767,8 @@ begin
 
 end;
 
-procedure TBaseMessage.SaveRepeatedInt32(Stream: TProtoStreamWriter;
-  const Data: specialize TSimpleTypeList<Int32>; const TagID: Integer);
+procedure SaveRepeatedInt32(Stream: TProtoStreamWriter;
+  const Data: TInt32s; const TagID: Integer);
 var
   SingleData: Int32;
   SizeNode: TLinkListNode;
@@ -512,8 +786,8 @@ begin
 
 end;
 
-procedure TBaseMessage.SaveRepeatedInt64(Stream: TProtoStreamWriter;
-  const Data: specialize TSimpleTypeList<Int64>; const TagID: Integer);
+procedure SaveRepeatedInt64(Stream: TProtoStreamWriter;
+  const Data: TInt64s; const TagID: Integer);
 var
   SingleData: Int64;
   SizeNode: TLinkListNode;
@@ -531,8 +805,8 @@ begin
 
 end;
 
-procedure TBaseMessage.SaveRepeatedUInt32(Stream: TProtoStreamWriter;
-  const Data: specialize TSimpleTypeList<UInt32>; const TagID: Integer);
+procedure SaveRepeatedUInt32(Stream: TProtoStreamWriter;
+  const Data: TUInt32s; const TagID: Integer);
 var
   SingleData: UInt32;
   SizeNode: TLinkListNode;
@@ -550,8 +824,8 @@ begin
 
 end;
 
-procedure TBaseMessage.SaveRepeatedUInt64(Stream: TProtoStreamWriter;
-  const Data: specialize TSimpleTypeList<UInt64>; const TagID: Integer);
+procedure SaveRepeatedUInt64(Stream: TProtoStreamWriter;
+  const Data: TUInt64s; const TagID: Integer);
 var
   SingleData: UInt64;
   SizeNode: TLinkListNode;
@@ -575,7 +849,7 @@ begin
 
 end;
 
-procedure TBaseMessage.SaveSingle(Stream: TProtoStreamWriter;
+procedure SaveSingle(Stream: TProtoStreamWriter;
   const Data: Single; const TagID: Integer);
 const
   AlmostZero: Double = 1e-10;
@@ -586,7 +860,7 @@ begin
 
 end;
 
-procedure TBaseMessage.SaveDouble(Stream: TProtoStreamWriter;
+procedure SaveDouble(Stream: TProtoStreamWriter;
   const Data: Double; const TagID: Integer);
 const
   AlmostZero: Double = 1e-10;
@@ -597,7 +871,7 @@ begin
 
 end;
 
-procedure TBaseMessage.SaveInt32(Stream: TProtoStreamWriter; const Data: Int32;
+procedure SaveInt32(Stream: TProtoStreamWriter; const Data: Int32;
   const TagID: Integer);
 begin
   if Data <> 0 then
@@ -605,7 +879,7 @@ begin
 
 end;
 
-procedure TBaseMessage.SaveInt64(Stream: TProtoStreamWriter; const Data: Int64;
+procedure SaveInt64(Stream: TProtoStreamWriter; const Data: Int64;
   const TagID: Integer);
 begin
   if Data <> 0 then
@@ -613,7 +887,7 @@ begin
 
 end;
 
-procedure TBaseMessage.SaveUInt32(Stream: TProtoStreamWriter;
+procedure SaveUInt32(Stream: TProtoStreamWriter;
   const Data: UInt32; const TagID: Integer);
 begin
   if Data <> 0 then
@@ -621,7 +895,7 @@ begin
 
 end;
 
-procedure TBaseMessage.SaveUInt64(Stream: TProtoStreamWriter;
+procedure SaveUInt64(Stream: TProtoStreamWriter;
   const Data: UInt64; const TagID: Integer);
 begin
   if Data <> 0 then
@@ -629,7 +903,7 @@ begin
 
 end;
 
-procedure TBaseMessage.SaveAnsiString(Stream: TProtoStreamWriter;
+procedure SaveAnsiString(Stream: TProtoStreamWriter;
   const Data: AnsiString; const TagID: Integer);
 begin
   if Data <> '' then
@@ -637,7 +911,7 @@ begin
 
 end;
 
-procedure TBaseMessage.SaveBoolean(Stream: TProtoStreamWriter;
+procedure SaveBoolean(Stream: TProtoStreamWriter;
   const Data: Boolean; const TagID: Integer);
 begin
   if Data then
@@ -645,48 +919,48 @@ begin
 
 end;
 
-function TBaseMessage.LoadSingle(Stream: TProtoStreamReader): Single;
+function LoadSingle(Stream: TProtoStreamReader): Single;
 begin
   Result := Stream.ReadSingle;
 
 end;
 
-function TBaseMessage.LoadDouble(Stream: TProtoStreamReader): Double;
+function LoadDouble(Stream: TProtoStreamReader): Double;
 begin
   Result := Stream.ReadDouble;
 end;
 
-function TBaseMessage.LoadInt32(Stream: TProtoStreamReader): Int32;
+function LoadInt32(Stream: TProtoStreamReader): Int32;
 begin
   Result := Stream.ReadInt32;
 
 end;
 
-function TBaseMessage.LoadInt64(Stream: TProtoStreamReader): Int64;
+function LoadInt64(Stream: TProtoStreamReader): Int64;
 begin
   Result := Stream.ReadInt64;
 
 end;
 
-function TBaseMessage.LoadUInt32(Stream: TProtoStreamReader): UInt32;
+function LoadUInt32(Stream: TProtoStreamReader): UInt32;
 begin
   Result := Stream.ReadUInt32
 
 end;
 
-function TBaseMessage.LoadUInt64(Stream: TProtoStreamReader): UInt64;
+function LoadUInt64(Stream: TProtoStreamReader): UInt64;
 begin
   Result := Stream.ReadUInt64
   ;
 end;
 
-function TBaseMessage.LoadAnsiString(Stream: TProtoStreamReader): AnsiString;
+function LoadAnsiString(Stream: TProtoStreamReader): AnsiString;
 begin
   Result := Stream.ReadAnsiString;
 
 end;
 
-function TBaseMessage.LoadBoolean(Stream: TProtoStreamReader): Boolean;
+function LoadBoolean(Stream: TProtoStreamReader): Boolean;
 begin
   Result := Stream.ReadBoolean;
 
@@ -716,7 +990,7 @@ var
 begin
   ProtoStream := TProtoStreamReader.Create(Stream);
 
-  Self.LoadFromStream(ProtoStream, Stream.Size);
+  Result := Self.LoadFromStream(ProtoStream, Stream.Size);
 
   ProtoStream.Free;
 end;

@@ -29,12 +29,12 @@ type
   private
     function GetCount: Integer;
   protected
-    FormatString: AnsiString;
+    function SimpleObjectToString(Obj: TSimpleObject): AnsiString; virtual; abstract;
 
   public
     property Count: Integer read GetCount write SetCount;
 
-    constructor Create(FmtString: AnsiString);
+    constructor Create;
     destructor Destroy; override;
 
     function ToString: AnsiString; override;
@@ -78,11 +78,10 @@ begin
   Result := FCount;
 end;
 
-constructor TSimpleTypeList.Create(FmtString: AnsiString);
+constructor TSimpleTypeList.Create;
 begin
   inherited Create;
 
-  FormatString := FmtString;
 end;
 
 destructor TSimpleTypeList.Destroy;
@@ -100,7 +99,7 @@ begin
   begin
     if Length(Result) <> 1 then
       Result += ', ';
-    Result += Format(FormatString, [data]);
+    Result += SimpleObjectToString(data);
   end;
   Result += ']';
 

@@ -50,13 +50,15 @@ type
   TMessage = class;
   TImports = class;
   TProto = class;
+  TOneOf = class;
 
   TParent = record
+    OneOf: TOneOf;
     Message: TMessage;
     Proto: TProto;
   end;
 
-  function CreateParent(aMessage: TMessage; aProto: TProto): TParent;
+  function CreateParent(anOneOf: TOneOf; aMessage: TMessage; aProto: TProto): TParent;
 
 type
 
@@ -64,6 +66,8 @@ type
 
   TMessageField = class(TObject)
   private
+    function GetCanonicalizeName: AnsiString;
+  protected
     FParent: TParent;
     FFieldNumber: Integer;
     FIsRepeated: Boolean;
@@ -74,6 +78,7 @@ type
     function GetFieldNumber: Integer; virtual;
     function GetFieldType: TType; virtual;
     function GetIsRepeated: Boolean; virtual;
+    function GetCanonicalizeFullName: AnsiString; virtual;
     function GetName: AnsiString; virtual;
     function GetOptions: TOptions;  virtual;
     // Returns the translation of FieldType to FPC.
@@ -86,11 +91,13 @@ type
     property FPCType: AnsiString read GetFPCType;
     property PackageName: AnsiString read GetPackageName;
     property Name: AnsiString read GetName;
+    property CanonicalizeName: AnsiString read GetCanonicalizeName;
+    property CanonicalizeFullName: AnsiString read GetCanonicalizeFullName;
     property FieldNumber: Integer read GetFieldNumber;
     property Options: TOptions read GetOptions;
 
     constructor Create(_Name: AnsiString; _FieldType: TType; _IsRepeated: Boolean;
-      _FieldNumber: Integer; _Options: TOptions; ParentMessage: TMessage);
+      _FieldNumber: Integer; _Options: TOptions; _Parent: TParent);
     destructor Destroy; override;
 
     function ToXML: AnsiString; virtual;
@@ -145,23 +152,15 @@ type
 
   { TOneOfField }
 
-  TOneOfField = class(TObject)
-  private
-    FOneOfFieldType: AnsiString;
-    FName: AnsiString;
-    FOptions: specialize TObjectList<TOption>;
-    FFieldNumber: Integer;
-    function GetFPCType: AnsiString;
-  public
-    property OneOfFieldType: TType read FOneOfFieldType;
-    property Name: AnsiString read FName;
-    property FieldNumber: Integer read FFieldNumber;
-    property FPCType: AnsiString read GetFPCType;
+  TOneOfField = class(TMessageField)
+  protected
+    function GetCanonicalizeFullName: AnsiString; override;
 
+  public
     constructor Create(_Name: AnsiString; _OneOfFieldType: TType;
-          _FieldNumber: Integer; _Options: TOptions);
-    destructor Destroy; override;
-    function ToXML: AnsiString;
+         _IsRepeated: Boolean; _FieldNumber: Integer; _Options: TOptions;
+         ParentOneOf: TOneOf);
+    function ToXML: AnsiString; override;
 
   end;
 
@@ -171,9 +170,11 @@ type
   TOneOf = class(TMessageField)
   private
     OneOfFields: TOneOfFields;
+    function GetFieldNumbers: AnsiString;
 
   public
     property Fields: TOneOfFields read OneOfFields;
+    property FieldNumbers: AnsiString read GetFieldNumbers;
     constructor Create(_Name: AnsiString; _Fields: TOneOfFields;
           ParentMessage: TMessage);
     destructor Destroy; override;
@@ -199,7 +200,7 @@ type
     property ValueType: TType read FValueType;
 
     constructor Create(_Name: AnsiString; _FieldNumber: Integer; _KeyType, _ValueType: TType;
-           _Options: TOptions; ParentMessage: TMessage);
+           _Options: TOptions; _Parent: TMessage);
     destructor Destroy; override;
 
     function ToXML: AnsiString; override;
@@ -304,8 +305,9 @@ implementation
 uses
   UtilsUnit, StringUnit, strutils;
 
-function CreateParent(aMessage: TMessage; aProto: TProto): TParent;
+function CreateParent(anOneOf: TOneOf; aMessage: TMessage; aProto: TProto): TParent;
 begin
+  Result.OneOf := anOneOf;
   Result.Message := aMessage;
   Result.Proto := aProto
   ;
@@ -358,9 +360,10 @@ begin
 end;
 
 constructor TMap.Create(_Name: AnsiString; _FieldNumber: Integer; _KeyType,
-  _ValueType: TType; _Options: TOptions; ParentMessage: TMessage);
+  _ValueType: TType; _Options: TOptions; _Parent: TMessage);
 begin
-   inherited Create(_Name, '', false, _FieldNumber, _Options, ParentMessage);
+   inherited Create(_Name, '', false, _FieldNumber, _Options,
+     CreateParent(nil, _Parent, nil));
 
    FKeyType := _KeyType;
    FValueType := _ValueType;
@@ -380,10 +383,27 @@ end;
 
 { TOneOf }
 
+function TOneOf.GetFieldNumbers: AnsiString;
+var
+  Field: TOneOfField;
+
+begin
+  Result := '';
+
+  for Field in Fields do
+  begin
+    if Result <> '' then
+      Result += ', ';
+    Result += IntToStr(Field.FieldNumber);
+  end;
+
+end;
+
 constructor TOneOf.Create(_Name: AnsiString; _Fields: TOneOfFields;
   ParentMessage: TMessage);
 begin
-  inherited Create(_Name, _Name, False, -1, TOptions.Create, ParentMessage);
+  inherited Create(_Name, _Name, False, -1, TOptions.Create,
+    CreateParent(nil, ParentMessage, nil));
 
   OneOfFields := _Fields;
 
@@ -413,36 +433,34 @@ end;
 
 { TOneOfField }
 
-function TOneOfField.GetFPCType: AnsiString;
+function TOneOfField.GetCanonicalizeFullName: AnsiString;
+var
+  FieldName: AnsiString;
+  ParentName: AnsiString;
+
 begin
-  Result := GetNonRepeatedType4FPC(OneOfFieldType);
+  FieldName := Canonicalize(Name);
+  ParentName := Canonicalize(Parent.OneOf.Name);
+
+  Result := Format('%s.%s', [ParentName, FieldName]);
 end;
 
 constructor TOneOfField.Create(_Name: AnsiString; _OneOfFieldType: TType;
-  _FieldNumber: Integer; _Options: TOptions);
+  _IsRepeated: Boolean; _FieldNumber: Integer; _Options: TOptions;
+  ParentOneOf: TOneOf);
 begin
-  inherited Create;
+  inherited Create(_Name, _OneOfFieldType, _IsRepeated, _FieldNumber, _Options,
+    CreateParent(ParentOneOf, nil, nil));
 
-  FName := _Name;
-  FOneOfFieldType := _OneOfFieldType;
-  FFieldNumber := _FieldNumber;
-  FOptions := _Options;
-end;
-
-destructor TOneOfField.Destroy;
-begin
-  FOptions.Free;
-
-  inherited Destroy;
 end;
 
 function TOneOfField.ToXML: AnsiString;
 begin
   Result:= Format('<TOneOfField Name = "%s" Type ="%s" FieldNumber = "%d"> %s </TOneOfField>',
-   [FName,
-    FOneOfFieldType,
-    FFieldNumber,
-    FOptions.ToXML]);
+   [Name,
+    FieldType,
+    FieldNumber,
+    Options.ToXML]);
 
 end;
 
@@ -619,6 +637,12 @@ end;
 
 { TMessageField }
 
+function TMessageField.GetCanonicalizeName: AnsiString;
+begin
+  Result := Canonicalize(FName);
+
+end;
+
 function TMessageField.GetFieldNumber: Integer;
 begin
   Result := FFieldNumber;
@@ -646,6 +670,11 @@ function TMessageField.GetIsRepeated: Boolean;
 begin
   Result := FIsRepeated;
 
+end;
+
+function TMessageField.GetCanonicalizeFullName: AnsiString;
+begin
+  Result := Canonicalize(GetName);
 end;
 
 function TMessageField.GetName: AnsiString;
@@ -692,9 +721,9 @@ begin
   Parts.Free;
 end;
 
-constructor TMessageField.Create(_Name: AnsiString;
-  _FieldType: TType; _IsRepeated: Boolean; _FieldNumber: Integer;
-  _Options: TOptions; ParentMessage: TMessage);
+constructor TMessageField.Create(_Name: AnsiString; _FieldType: TType;
+  _IsRepeated: Boolean; _FieldNumber: Integer; _Options: TOptions;
+  _Parent: TParent);
 begin
   inherited Create;
 
@@ -703,7 +732,7 @@ begin
   FIsRepeated := _IsRepeated;
   FFieldNumber := _FieldNumber;
   FOptions := _Options;
-  FParent.Message := ParentMessage;
+  FParent := _Parent;
 
 end;
 

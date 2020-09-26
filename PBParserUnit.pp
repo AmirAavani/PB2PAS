@@ -140,7 +140,7 @@ type
     function ParseOption(EndTokenTypes: array of TTokenKind): TOption;
     function MaybeParseOptions: TOptions;
     function ParseOneOf(ParentMessage: TMessage): TOneOf;
-    function ParseOneOfField: TOneOfField;
+    function ParseOneOfField(ParentOneOf: TOneOf): TOneOfField;
     function ParseMap(ParentMessage: TMessage): TMap;
     function ParseMessageField(ParentMessage: TMessage): TMessageField;
     function ParseConstant: TConstant;
@@ -799,7 +799,7 @@ begin
     if Token.TokenString = 'enum' then
       Enums.Add(ParseEnum)
     else if Token.TokenString = 'message' then
-      Messages.Add(Self.ParseMessage(CreateParent(Result, Parent.Proto)))
+      Messages.Add(Self.ParseMessage(CreateParent(nil, Result, Parent.Proto)))
     else if Token.TokenString = 'option' then
       Options.Add(ParseOption(ttkSemiColon))
     else if Token.TokenString = 'oneof' then
@@ -993,18 +993,19 @@ begin
   Token := Tokenizer.GetNextToken;
 
   OneOfFields := TOneOfFields.Create;
+  Result := TOneOf.Create(Name, OneOfFields, ParentMessage);
 
   while Token.Kind <> ttkCloseBrace do
   begin
     Tokenizer.Rewind;
-    OneOfFields.Add(ParseOneOfField);
+    OneOfFields.Add(ParseOneOfField(Result));
     Token := Tokenizer.GetNextToken;
+
   end;
 
-  Result := TOneOf.Create(Name, OneOfFields, ParentMessage);
 end;
 
-function TProto3Parser.ParseOneOfField: TOneOfField;
+function TProto3Parser.ParseOneOfField(ParentOneOf: TOneOf): TOneOfField;
 // oneofField = type fieldName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
 var
   OneOfFieldType: TType;
@@ -1020,7 +1021,8 @@ begin
   Options := MaybeParseOptions;
   Tokenizer.Expect(ttkSemiColon);
 
-  Result := TOneOfField.Create(Name, OneOfFieldType, FieldNumber, options);
+  Result := TOneOfField.Create(Name, OneOfFieldType, False, FieldNumber, options,
+    ParentOneOf);
 
 end;
 
@@ -1082,7 +1084,8 @@ begin
 
   Tokenizer.Expect(ttkSemiColon);
 
-  Result := TMessageField.Create(Name, FieldType, IsRepeated, FieldNumber, Options, ParentMessage);
+  Result := TMessageField.Create(Name, FieldType, IsRepeated, FieldNumber,
+    Options, CreateParent(nil, ParentMessage, nil));
 
 end;
 
@@ -1260,7 +1263,6 @@ begin
   Options := TOptions.Create;
   Messages := TMessages.Create;
   Enums := TEnums.Create;
-
   while Token.Kind <> ttkEOF do
   begin
     if Token.TokenString = 'import' then
@@ -1270,7 +1272,7 @@ begin
     else if Token.TokenString = 'option' then
       Options.Add(ParseOption(ttkSemiColon))
     else if Token.TokenString = 'message' then
-      Messages.Add(ParseMessage(CreateParent(nil, Result)))
+      Messages.Add(ParseMessage(CreateParent(nil, nil, Result)))
     else if Token.TokenString = 'enum' then
       Enums.Add(ParseEnum)
     else if Token.TokenString = 'service' then
