@@ -2,7 +2,7 @@ const
  DeclareRepeatedSimpleFieldTemplate : AnsiString =
   '  // Methods for repeated [[Field.PackageNameWithDot]][[Field.Type]] [[Field.Name]] = [[Field.Number]];' + sLineBreak +
   '  public type' + sLineBreak +
-  '    T[[CanName]] = specialize TSimpleTypeList<[[Field.UnitNameWithDot]][[Field.InnerFPCType]]>;' + sLineBreak + sLineBreak +
+  '    T[[CanName]] =  T[[Field.InnerFPCType]]s;' + sLineBreak + sLineBreak +
   '  private' + sLineBreak +
   '    F[[CanName]]: T[[CanName]];' + sLineBreak + sLineBreak +
   '' + sLineBreak +
@@ -33,28 +33,7 @@ const
    '' + sLineBreak +
    'begin' + sLineBreak +
    '  if F[[CanName]] = nil then' + sLineBreak +
-   '    F[[CanName]] := T[[CanName]].Create(''%[[FormatString]]'');' + sLineBreak +
-   '  Result := F[[CanName]];'+ sLineBreak + sLineBreak +
-   'end;' + sLineBreak + sLineBreak;
-
- ImplementRepeatedBooleanTemplate : AnsiString =
-   '// Methods for repeated [[Field.Type]] [[Field.Name]] = [[Field.Number]];' + sLineBreak +
-  '// Getter Functions' + sLineBreak + sLineBreak +
-   'function [[ClassName]].Get[[CanName]](Index: Integer): [[Field.UnitNameWithDot]][[[Field.InnerPCType]];' + sLineBreak +
-   'begin' + sLineBreak +
-   '  Result := F[[CanName]][Index];' + sLineBreak + sLineBreak +
-   'end;' + sLineBreak + sLineBreak +
-   'function [[ClassName]].GetAll[[CanName]]: specialize TSimpleTypeList<[[Field.Type]]>;' + sLineBreak +
-   'begin' + sLineBreak +
-   '  if Self = nil then' + sLineBreak +
-   '    Exit(nil);' + sLineBreak +
-   '  Result := F[[CanName]];'+ sLineBreak + sLineBreak +
-   'end;' + sLineBreak + sLineBreak +
-   'function [[ClassName]].GetOrCreateAll[[CanName]]: specialize TSimpleTypeList<[[Field.Type]]>;' + sLineBreak +
-   '' + sLineBreak +
-   'begin' + sLineBreak +
-   '  if F[[CanName]] = nil then' + sLineBreak +
-   '    F[[CanName]] := TBooleanList.Create(''%[[FormatString]]'');' + sLineBreak +
+   '    F[[CanName]] := T[[CanName]].Create;' + sLineBreak +
    '  Result := F[[CanName]];'+ sLineBreak + sLineBreak +
    'end;' + sLineBreak + sLineBreak;
 

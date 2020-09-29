@@ -97,9 +97,9 @@ type
 
   end;
 
-  { TStringList }
+  { TAnsiStrings }
 
-  TStringList = class(specialize TSimpleTypeList<AnsiString>)
+  TAnsiStrings = class(specialize TSimpleTypeList<AnsiString>)
   public
     constructor Create;
 
@@ -210,7 +210,7 @@ procedure SaveRepeatedUInt64(Stream: TProtoStreamWriter;
     const TagID: Integer);
 procedure SaveRepeatedAnsiString(
     Stream: TProtoStreamWriter;
-   const Data: TStringList;
+   const Data: TAnsiStrings;
   const TagID: Integer);
 procedure SaveRepeatedBoolean(Stream: TProtoStreamWriter;
     const Data: TBooleans;
@@ -229,7 +229,7 @@ function LoadRepeatedUInt32(Stream: TProtoStreamReader;
 function LoadRepeatedUInt64(Stream: TProtoStreamReader;
     Data: TUInt64s): Boolean;
 function LoadRepeatedAnsiString(Stream: TProtoStreamReader;
-     Data: TStringList): Boolean;
+     Data: TAnsiStrings): Boolean;
 function LoadRepeatedBoolean(Stream: TProtoStreamReader;
     Data: TBooleans): Boolean;
 
@@ -349,7 +349,6 @@ end;
 
 constructor TBooleans.Create;
 begin
-  // ??
   inherited Create;
 
 end;
@@ -357,19 +356,21 @@ end;
 function TBooleans.SimpleObjectToString(Obj: Boolean): AnsiString;
 begin
   Result := BoolToStr(Obj, 'True', 'False');
+
 end;
 
-{ TStringList }
+{ TAnsiStrings }
 
-constructor TStringList.Create;
+constructor TAnsiStrings.Create;
 begin
   inherited Create;
 
 end;
 
-function TStringList.SimpleObjectToString(Obj: AnsiString): AnsiString;
+function TAnsiStrings.SimpleObjectToString(Obj: AnsiString): AnsiString;
 begin
   Result := Obj;
+
 end;
 
 { EBaseOneOf }
@@ -448,7 +449,7 @@ end;
 { TBaseMessage }
 
 procedure SaveRepeatedAnsiString(Stream: TProtoStreamWriter;
-  const Data: TStringList; const TagID: Integer);
+  const Data: TAnsiStrings; const TagID: Integer);
 var
   AnsiStringData: AnsiString;
   SizeNode: TLinkListNode;
@@ -617,7 +618,7 @@ begin
 end;
 
 function LoadRepeatedAnsiString(Stream: TProtoStreamReader;
-  Data: TStringList): Boolean;
+  Data: TAnsiStrings): Boolean;
 var
   Len: uInt32;
   NewDatum: AnsiString;

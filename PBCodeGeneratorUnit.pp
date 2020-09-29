@@ -653,13 +653,13 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
             '%s  %d: ' + sLineBreak +
             '%s  begin' + sLineBreak +
             '%s    F%s := %s.Create;' + sLineBreak +
-            '%s    if not LoadRepeatedInt32(Stream, F%S) then' + sLineBreak +
+            '%s    if not LoadRepeated%s(Stream, F%S) then' + sLineBreak +
             '%s      Exit(False);' + sLineBreak +
-            '%s  end' + sLineBreak,
+            '%s  end;' + sLineBreak,
               [Indent, Field.FieldNumber,
               Indent,
               Indent, CanName, Field.FPCType,
-              Indent, CanName,
+              Indent, FieldType, CanName,
               Indent,
               Indent]));
           else
@@ -838,8 +838,6 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
     if not aField.IsRepeated then
     else if not IsSimpleType(aField, Self.Proto, RelatedProtos) then
       UnitCode.ImplementationCode.Methods.Add(ApplyPattern(MessageClassName, ImplementRepeatedNonSimpleFieldTemplate))
-    else if aField.FPCType = 'Boolean' then
-      UnitCode.ImplementationCode.Methods.Add(ApplyPattern(MessageClassName, ImplementRepeatedBooleanTemplate))
     else
       UnitCode.ImplementationCode.Methods.Add(ApplyPattern(MessageClassName, ImplementRepeatedSimpleFieldTemplate));
 

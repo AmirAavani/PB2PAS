@@ -3,11 +3,11 @@
   <ProjectSession>
     <Version Value="12"/>
     <BuildModes Active="Default"/>
-    <Units Count="25">
+    <Units Count="26">
       <Unit0>
         <Filename Value="PB2PAS.lpr"/>
         <IsPartOfProject Value="True"/>
-        <CursorPos Y="14"/>
+        <CursorPos X="23" Y="12"/>
         <UsageCount Value="566"/>
         <Loaded Value="True"/>
       </Unit0>
@@ -15,8 +15,8 @@
         <Filename Value="modules/General-Purpose-Units/ParameterManagerUnit.pp"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="2"/>
-        <TopLine Value="195"/>
-        <CursorPos Y="229"/>
+        <TopLine Value="121"/>
+        <CursorPos X="38" Y="138"/>
         <UsageCount Value="565"/>
         <Loaded Value="True"/>
       </Unit1>
@@ -31,7 +31,7 @@
         <Filename Value="UtilsUnit.pp"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="11"/>
-        <CursorPos X="48" Y="20"/>
+        <CursorPos X="22" Y="14"/>
         <UsageCount Value="209"/>
         <Loaded Value="True"/>
       </Unit3>
@@ -39,8 +39,8 @@
         <Filename Value="PBDefinitionUnit.pp"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="12"/>
-        <TopLine Value="75"/>
-        <CursorPos X="14" Y="91"/>
+        <TopLine Value="701"/>
+        <CursorPos X="13" Y="719"/>
         <UsageCount Value="208"/>
         <Loaded Value="True"/>
       </Unit4>
@@ -56,13 +56,12 @@
         <Filename Value="PBCodeGeneratorUnit.pp"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="8"/>
-        <TopLine Value="807"/>
-        <CursorPos X="35" Y="821"/>
+        <TopLine Value="632"/>
+        <CursorPos X="75" Y="651"/>
         <UsageCount Value="234"/>
-        <Bookmarks Count="3">
+        <Bookmarks Count="2">
           <Item0 Y="590" ID="2"/>
           <Item1 Y="598" ID="3"/>
-          <Item2 X="58" Y="680" ID="1"/>
         </Bookmarks>
         <Loaded Value="True"/>
       </Unit6>
@@ -70,8 +69,6 @@
         <Filename Value="modules/ALogger/ALoggerUnit.pp"/>
         <IsPartOfProject Value="True"/>
         <EditorIndex Value="10"/>
-        <TopLine Value="85"/>
-        <CursorPos X="3" Y="91"/>
         <UsageCount Value="203"/>
         <Loaded Value="True"/>
       </Unit7>
@@ -79,7 +76,7 @@
         <Filename Value="PBParserUnit.pp"/>
         <EditorIndex Value="1"/>
         <TopLine Value="1228"/>
-        <CursorPos Y="1262"/>
+        <CursorPos X="21" Y="1239"/>
         <UsageCount Value="284"/>
         <Loaded Value="True"/>
       </Unit8>
@@ -87,8 +84,8 @@
         <Filename Value="ProtoHelperUnit.pp"/>
         <IsVisibleTab Value="True"/>
         <EditorIndex Value="4"/>
-        <TopLine Value="370"/>
-        <CursorPos X="16" Y="372"/>
+        <TopLine Value="620"/>
+        <CursorPos X="21" Y="621"/>
         <UsageCount Value="251"/>
         <Loaded Value="True"/>
       </Unit9>
@@ -97,27 +94,27 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="175"/>
         <CursorPos Y="189"/>
-        <UsageCount Value="76"/>
+        <UsageCount Value="75"/>
       </Unit10>
       <Unit11>
         <Filename Value="../../../Amir/Mine/Tools/fpc/rtl/inc/astrings.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="212"/>
         <CursorPos Y="240"/>
-        <UsageCount Value="110"/>
+        <UsageCount Value="109"/>
       </Unit11>
       <Unit12>
         <Filename Value="modules/General-Purpose-Units/StringUnit.pp"/>
-        <EditorIndex Value="-1"/>
-        <TopLine Value="62"/>
-        <CursorPos Y="97"/>
-        <UsageCount Value="80"/>
+        <EditorIndex Value="13"/>
+        <CursorPos X="22" Y="20"/>
+        <UsageCount Value="79"/>
+        <Loaded Value="True"/>
       </Unit12>
       <Unit13>
         <Filename Value="ProtoHelperListsUnit.pp"/>
         <EditorIndex Value="5"/>
-        <TopLine Value="15"/>
-        <CursorPos X="86" Y="32"/>
+        <TopLine Value="3"/>
+        <CursorPos X="121" Y="15"/>
         <UsageCount Value="107"/>
         <Loaded Value="True"/>
       </Unit13>
@@ -125,13 +122,16 @@
         <Filename Value="RepeatedNonSimpleFieldTemplate.inc"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="33" Y="8"/>
-        <UsageCount Value="73"/>
+        <UsageCount Value="72"/>
       </Unit14>
       <Unit15>
         <Filename Value="RepeatedSimpleFieldTemplate.inc"/>
         <EditorIndex Value="9"/>
-        <CursorPos X="56" Y="3"/>
-        <UsageCount Value="72"/>
+        <CursorPos X="39" Y="22"/>
+        <UsageCount Value="79"/>
+        <Bookmarks Count="1">
+          <Item0 X="58" Y="5" ID="1"/>
+        </Bookmarks>
         <Loaded Value="True"/>
       </Unit15>
       <Unit16>
@@ -139,24 +139,24 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="1111"/>
         <CursorPos X="66" Y="1115"/>
-        <UsageCount Value="45"/>
+        <UsageCount Value="44"/>
       </Unit16>
       <Unit17>
         <Filename Value="NonRepeatedSimpleFieldTemplate.inc"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="52" Y="3"/>
-        <UsageCount Value="66"/>
+        <UsageCount Value="65"/>
       </Unit17>
       <Unit18>
         <Filename Value="NonRepeatedNonSimpleFieldTemplate.inc"/>
         <EditorIndex Value="-1"/>
         <CursorPos X="25" Y="3"/>
-        <UsageCount Value="66"/>
+        <UsageCount Value="65"/>
       </Unit18>
       <Unit19>
         <Filename Value="ValidArguments.inc"/>
         <EditorIndex Value="3"/>
-        <CursorPos X="43" Y="2"/>
+        <CursorPos X="50" Y="2"/>
         <UsageCount Value="102"/>
         <Loaded Value="True"/>
       </Unit19>
@@ -165,14 +165,14 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="617"/>
         <CursorPos Y="640"/>
-        <UsageCount Value="28"/>
+        <UsageCount Value="27"/>
       </Unit20>
       <Unit21>
         <Filename Value="../../../Amir/Mine/Tools/fpc/rtl/inc/heap.inc"/>
         <EditorIndex Value="-1"/>
         <TopLine Value="266"/>
         <CursorPos X="39" Y="277"/>
-        <UsageCount Value="13"/>
+        <UsageCount Value="12"/>
       </Unit21>
       <Unit22>
         <Filename Value="ProtoStreamUnit.pp"/>
@@ -185,7 +185,7 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="265"/>
         <CursorPos X="14" Y="282"/>
-        <UsageCount Value="20"/>
+        <UsageCount Value="19"/>
       </Unit23>
       <Unit24>
         <Filename Value="/usr/share/fpcsrc/rtl/objpas/types.pp"/>
@@ -193,129 +193,135 @@
         <EditorIndex Value="-1"/>
         <TopLine Value="150"/>
         <CursorPos X="5" Y="165"/>
-        <UsageCount Value="47"/>
+        <UsageCount Value="46"/>
       </Unit24>
+      <Unit25>
+        <Filename Value="modules/General-Purpose-Units/substrings.pp"/>
+        <UnitName Value="SubStrings"/>
+        <EditorIndex Value="-1"/>
+        <UsageCount Value="10"/>
+      </Unit25>
     </Units>
     <JumpHistory Count="30" HistoryIndex="29">
       <Position1>
         <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="107" Column="50" TopLine="90"/>
+        <Caret Line="14" Column="29"/>
       </Position1>
       <Position2>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="262" Column="19" TopLine="245"/>
+        <Filename Value="RepeatedSimpleFieldTemplate.inc"/>
+        <Caret Line="5" Column="23"/>
       </Position2>
       <Position3>
         <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="270" Column="19" TopLine="253"/>
+        <Caret Line="102" Column="34" TopLine="85"/>
       </Position3>
       <Position4>
         <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="278" Column="19" TopLine="261"/>
+        <Caret Line="364" Column="25" TopLine="347"/>
       </Position4>
       <Position5>
         <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="286" Column="19" TopLine="269"/>
+        <Caret Line="359" TopLine="353"/>
       </Position5>
       <Position6>
         <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="294" Column="19" TopLine="277"/>
+        <Caret Line="85" Column="14" TopLine="79"/>
       </Position6>
       <Position7>
         <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="302" Column="19" TopLine="285"/>
+        <Caret Line="352" TopLine="342"/>
       </Position7>
       <Position8>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="311" Column="19" TopLine="294"/>
+        <Filename Value="ProtoHelperListsUnit.pp"/>
+        <Caret Line="28" Column="11" TopLine="3"/>
       </Position8>
       <Position9>
         <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="319" Column="19" TopLine="302"/>
+        <Caret Line="106" Column="34" TopLine="85"/>
       </Position9>
       <Position10>
         <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="19" Column="14" TopLine="2"/>
+        <Caret Line="102" Column="34" TopLine="85"/>
       </Position10>
       <Position11>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="261" Column="3" TopLine="260"/>
+        <Filename Value="RepeatedSimpleFieldTemplate.inc"/>
+        <Caret Line="5" Column="34"/>
       </Position11>
       <Position12>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="30" Column="14" TopLine="13"/>
+        <Filename Value="RepeatedSimpleFieldTemplate.inc"/>
+        <Caret Line="47" Column="76" TopLine="30"/>
       </Position12>
       <Position13>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="274" Column="23" TopLine="272"/>
+        <Filename Value="RepeatedSimpleFieldTemplate.inc"/>
+        <Caret Line="5" Column="49"/>
       </Position13>
       <Position14>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="41" Column="14" TopLine="24"/>
+        <Filename Value="RepeatedSimpleFieldTemplate.inc"/>
+        <Caret Line="47" Column="71" TopLine="30"/>
       </Position14>
       <Position15>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="288" Column="23" TopLine="286"/>
+        <Filename Value="RepeatedSimpleFieldTemplate.inc"/>
+        <Caret Line="5" Column="59"/>
       </Position15>
       <Position16>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="52" Column="14" TopLine="35"/>
+        <Filename Value="RepeatedSimpleFieldTemplate.inc"/>
+        <Caret Line="47" Column="59" TopLine="30"/>
       </Position16>
       <Position17>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="309" Column="13" TopLine="300"/>
+        <Filename Value="RepeatedSimpleFieldTemplate.inc"/>
+        <Caret Line="22" Column="59" TopLine="18"/>
       </Position17>
       <Position18>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="60" Column="17" TopLine="43"/>
+        <Filename Value="RepeatedSimpleFieldTemplate.inc"/>
+        <Caret Line="47" Column="58" TopLine="19"/>
       </Position18>
       <Position19>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="323" TopLine="314"/>
+        <Filename Value="RepeatedSimpleFieldTemplate.inc"/>
+        <Caret Line="60" Column="2" TopLine="30"/>
       </Position19>
       <Position20>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="71" Column="17" TopLine="54"/>
+        <Filename Value="RepeatedSimpleFieldTemplate.inc"/>
+        <Caret Line="43" Column="44" TopLine="10"/>
       </Position20>
       <Position21>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="331" TopLine="328"/>
+        <Filename Value="PBCodeGeneratorUnit.pp"/>
+        <Caret Line="846" Column="13" TopLine="825"/>
       </Position21>
       <Position22>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="82" Column="14" TopLine="57"/>
+        <Filename Value="PBCodeGeneratorUnit.pp"/>
+        <Caret Line="888" TopLine="856"/>
       </Position22>
       <Position23>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="344" Column="22" TopLine="342"/>
+        <Filename Value="PBCodeGeneratorUnit.pp"/>
+        <Caret Line="318" Column="71" TopLine="303"/>
       </Position23>
       <Position24>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="74" Column="14" TopLine="68"/>
+        <Filename Value="PBCodeGeneratorUnit.pp"/>
+        <Caret Line="602" Column="32" TopLine="570"/>
       </Position24>
       <Position25>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="330" Column="14" TopLine="328"/>
+        <Filename Value="PBCodeGeneratorUnit.pp"/>
+        <Caret Line="712" Column="9" TopLine="709"/>
       </Position25>
       <Position26>
-        <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="74" Column="14" TopLine="57"/>
+        <Filename Value="ProtoHelperListsUnit.pp"/>
+        <Caret Line="15" Column="121" TopLine="3"/>
       </Position26>
       <Position27>
         <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="330" Column="22" TopLine="328"/>
+        <Caret Line="213" Column="28" TopLine="194"/>
       </Position27>
       <Position28>
         <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="96" Column="14" TopLine="66"/>
+        <Caret Line="463" Column="57" TopLine="451"/>
       </Position28>
       <Position29>
         <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="359" Column="43" TopLine="357"/>
+        <Caret Line="621" Column="32" TopLine="592"/>
       </Position29>
       <Position30>
         <Filename Value="ProtoHelperUnit.pp"/>
-        <Caret Line="107" Column="14" TopLine="90"/>
+        <Caret Line="232" Column="24" TopLine="214"/>
       </Position30>
     </JumpHistory>
     <RunParams>
@@ -328,7 +334,7 @@
         </Mode0>
       </Modes>
     </RunParams>
-    <HistoryLists Count="3">
+    <HistoryLists Count="2">
       <List0 Name="LaunchingApplication" Type="File" Count="1">
         <Item1 Value="/usr/bin/gnome-terminal -t &apos;Lazarus Run Output&apos; -e &apos;$(LazarusDir)/tools/runwait.sh $(TargetCmdLine)&apos;"/>
       </List0>
@@ -348,6 +354,15 @@
     </HistoryLists>
   </ProjectSession>
   <Debugging>
+    <BreakPoints>
+      <Item>
+        <Kind Value="bpkSource"/>
+        <WatchScope Value="wpsLocal"/>
+        <WatchKind Value="wpkWrite"/>
+        <Source Value="PBCodeGeneratorUnit.pp"/>
+        <Line Value="630"/>
+      </Item>
+    </BreakPoints>
     <Watches>
       <Item>
         <Expression Value="Field.FieldType"/>

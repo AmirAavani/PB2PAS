@@ -1,2 +1,2 @@
-  ValidArguments : array of AnsiString = ('--InputFile', '--Debug');
-  ValidArgumentsValues : array of AnsiString = ('None:END', 'True:False');
+  ValidArgumentsInfo : array of AnsiString = ('--InputFile:AnsiString', '--Debug:Boolean');
+  ValidArgumentsValues : array of AnsiString = ('', 'True');

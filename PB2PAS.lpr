@@ -12,9 +12,9 @@ type
 
 begin
   WriteLn('<A>');
-  WriteLn(GetRunTimeParameterManager.ValueByName['--InputFile']);
+  WriteLn(GetRunTimeParameterManager.ValueByName['--InputFile'].AsAnsiString);
 
-  PBCodeGenerator.GenerateCode(GetRunTimeParameterManager.ValueByName['--InputFile']);
+  PBCodeGenerator.GenerateCode(GetRunTimeParameterManager.ValueByName['--InputFile'].AsAnsiString);
 
   WriteLn('</A>');
 end.
