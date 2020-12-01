@@ -3,8 +3,9 @@ program PB2PAS;
 {$mode objfpc}{$H+}
 {$MODESWITCH ADVANCEDRECORDS}
 uses
-  Classes, sysutils, ParameterManagerUnit, PBParserUnit, StringUnit, UtilsUnit,
-  PBDefinitionUnit, PBCodeGenerator, PBCodeGeneratorUnit, ALoggerUnit, fgl;
+  cthreads, Classes, sysutils, ParameterManagerUnit, PBParserUnit, StringUnit,
+  UtilsUnit, PBDefinitionUnit, PBCodeGenerator, PBCodeGeneratorUnit,
+  ProtoHelperUnit, ALoggerUnit, fgl, PBTypeUnit, PBOptionUnit, ObjectListUnit;
 
 
 type

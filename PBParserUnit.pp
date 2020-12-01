@@ -24,7 +24,7 @@ type
 implementation
 
 uses
-  UtilsUnit, StringUnit, ALoggerUnit;
+  UtilsUnit, StringUnit, PBTypeUnit, ALoggerUnit, PBOptionUnit;
 
 type
   TTokenKind = (ttkStart, ttkDot, ttkOpenBrace, ttkCloseBrace, ttkOpenPar,
@@ -116,7 +116,7 @@ type
     function ParseIdent: TIdentifier;
     function ParseFieldNumber: Integer;
     function ParseFullIdent: TFullIdentifier;
-    function ParseType: TType;
+    function ParseType: TBaseType;
 
     function CollectUntil(EndTokenKind: TTokenKind): TTokenArray;
 
@@ -510,32 +510,34 @@ begin
   inherited Destroy;
 end;
 
-function TProtoParser.ParseType: TType;
+function TProtoParser.ParseType: TBaseType;
  // type = "double" | "float" | "int32" | "int64" | "uint32" | "uint64"
  //     | "sint32" | "sint64" | "fixed32" | "fixed64" | "sfixed32" | "sfixed64"
  //     | "bool" | "string" | "bytes" | messageType | enumType
 
 var
+  ResultStr: AnsiString;
   Token: TToken;
 
 begin
   Token := Tokenizer.GetNextToken;
-  Result := Token.TokenString;
+  ResultStr := Token.TokenString;
   Token := Tokenizer.GetNextToken;
 
   while Token.Kind = ttkDot do
   begin
-    Result += Token.TokenString;
+    ResultStr += Token.TokenString;
 
     Token := Tokenizer.GetNextToken;
     if Token.Kind <> ttkIdentifier then
       raise EInvalidToken.Create(Token.TokenString, ttkIdentifier);
-    Result += Token.TokenString;
+    ResultStr += Token.TokenString;
 
     Token := Tokenizer.GetNextToken;
   end;
 
-    Tokenizer.Rewind();
+  Result := TBaseType.Create(ResultStr);
+  Tokenizer.Rewind();
 end;
 
 function TProtoParser.CollectUntil(EndTokenKind: TTokenKind): TTokenArray;
@@ -1008,7 +1010,7 @@ end;
 function TProto3Parser.ParseOneOfField(ParentOneOf: TOneOf): TOneOfField;
 // oneofField = type fieldName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
 var
-  OneOfFieldType: TType;
+  OneOfFieldType: TBaseType;
   Name: AnsiString;
   FieldNumber: Integer;
   Options: TOptions;
@@ -1028,7 +1030,7 @@ end;
 
 function TProto3Parser.ParseMap(ParentMessage: TMessage): TMap;
 var
-  KeyType, ValueType: TType;
+  KeyType, ValueType: TBaseType;
   Name: AnsiString;
   FieldNumber: Integer;
   Options: TOptions;
@@ -1057,7 +1059,7 @@ function TProto3Parser.ParseMessageField(ParentMessage: TMessage
   ): TMessageField;
 var
   Name: AnsiString;
-  FieldType: TType;
+  FieldType: TBaseType;
   IsRepeated: Boolean;
   FieldNumber: Integer;
   Options: TOptions;

@@ -19,10 +19,12 @@ function GetUnitName(MessageField: TMessageField; FieldProto: TProto; RelatedPro
 function IsAnEnumType(MessageField: TMessageField; FieldProto: TProto; RelatedProtos: TProtos): Boolean;
 function IsOneOfType(MessageField: TMessageField; FieldProto: TProto; RelatedProtos: TProtos): Boolean;
 function GetMessageClassName(aMessage: TMessage): AnsiString;
+function GetOneOfClassName(anOneOf: TOneOf): AnsiString;
+function GetMapClassName(aMap: TMap): AnsiString;
+function MaybeRemoveQuotations(aValue: AnsiString): AnsiString;
 
 type
   ENotImplementedYet = class(Exception);
-
 
 implementation
 
@@ -94,7 +96,7 @@ var
   P: TProto;
 
 begin
-  case MessageField.FieldType of
+  case MessageField.FieldType.ProtoType of
     'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
       , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
       , 'bool' , 'string' , 'bytes': Exit(True);
@@ -107,10 +109,10 @@ begin
     while (Parent.Message <> nil) or (Parent.Proto <> nil) do
     begin
       if (Parent.Message <> nil) and (Parent.Message.Enums <> nil) then
-        if Parent.Message.Enums.ByName[MessageField.FieldType] <> nil then
+        if Parent.Message.Enums.ByName[MessageField.FieldType.ProtoType] <> nil then
           Exit(True);
       if (Parent.Proto <> nil) and (Parent.Proto.Enums <> nil) then
-        if Parent.Proto.Enums.ByName[MessageField.FieldType] <> nil then
+        if Parent.Proto.Enums.ByName[MessageField.FieldType.ProtoType] <> nil then
           Exit(True);
 
       if Parent.Message <> nil then
@@ -120,7 +122,7 @@ begin
 
     end;
 
-    if (FieldProto.Enums <> nil) and (FieldProto.Enums.ByName[MessageField.FieldType] <> nil) then
+    if (FieldProto.Enums <> nil) and (FieldProto.Enums.ByName[MessageField.FieldType.ProtoType] <> nil) then
       Exit(True);
 
     Exit(False);
@@ -133,7 +135,7 @@ begin
     if p.PackageName <> PackageName then
       Continue;
     if p.Enums <> nil then
-      Exit(p.Enums.ByName[MessageField.FieldType] <> nil);
+      Exit(p.Enums.ByName[MessageField.FieldType.ProtoType] <> nil);
   end;
 
 end;
@@ -165,7 +167,7 @@ var
   P: TProto;
 
 begin
-  case MessageField.FieldType of
+  case MessageField.FieldType.ProtoType of
     'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
       , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
       , 'bool' , 'string' , 'bytes': Exit(False);
@@ -178,10 +180,10 @@ begin
     while (Parent.Message <> nil) or (Parent.Proto <> nil) do
     begin
       if (Parent.Message <> nil) and (Parent.Message.Enums <> nil) then
-        if Parent.Message.Enums.ByName[MessageField.FieldType] <> nil then
+        if Parent.Message.Enums.ByName[MessageField.FieldType.ProtoType] <> nil then
           Exit(True);
       if (Parent.Proto <> nil) and (Parent.Proto.Enums <> nil) then
-        if Parent.Proto.Enums.ByName[MessageField.FieldType] <> nil then
+        if Parent.Proto.Enums.ByName[MessageField.FieldType.ProtoType] <> nil then
           Exit(True);
 
       if Parent.Message <> nil then
@@ -191,7 +193,7 @@ begin
 
     end;
 
-    if (FieldProto.Enums <> nil) and (FieldProto.Enums.ByName[MessageField.FieldType] <> nil) then
+    if (FieldProto.Enums <> nil) and (FieldProto.Enums.ByName[MessageField.FieldType.ProtoType] <> nil) then
       Exit(True);
 
     Exit(False);
@@ -202,7 +204,7 @@ begin
     if p.PackageName <> PackageName then
       Continue;
     if p.Enums <> nil then
-      Exit(p.Enums.ByName[MessageField.FieldType] <> nil);
+      Exit(p.Enums.ByName[MessageField.FieldType.ProtoType] <> nil);
   end;
 
   Result := False;
@@ -216,7 +218,7 @@ var
   P: TProto;
 
 begin
-  case MessageField.FieldType of
+  case MessageField.FieldType.ProtoType of
     'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
       , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
       , 'bool' , 'string' , 'bytes': Exit(False);
@@ -245,7 +247,43 @@ begin
   begin
     Result := Format('T%s.%s', [Canonicalize(Parent.Message.Name), Result]);
     Parent := Parent.Message.Parent;
+
   end;
+
+end;
+
+function GetOneOfClassName(anOneOf: TOneOf): AnsiString;
+var
+  Parent: TParent;
+
+begin
+  Result := Format('T%s', [Canonicalize(anOneOf.Name)]);
+  Parent := anOneOf.Parent;
+
+  while Parent.Message <> nil do
+  begin
+    Result := Format('T%s.%s', [Canonicalize(Parent.Message.Name), Result]);
+    Parent := Parent.Message.Parent;
+
+  end;
+
+end;
+
+function GetMapClassName(aMap: TMap): AnsiString;
+var
+  Parent: TParent;
+
+begin
+  Result := aMap.FPCType;
+  Parent := aMap.Parent;
+
+  while Parent.Message <> nil do
+  begin
+    Result := Format('T%s.%s', [Canonicalize(Parent.Message.Name), Result]);
+    Parent := Parent.Message.Parent;
+
+  end;
+
 end;
 
 function GetTypeSize(TypeName: AnsiString): Integer;
@@ -288,6 +326,14 @@ begin
   'bytes': Exit('p');
 
   end;
+end;
+
+function MaybeRemoveQuotations(aValue: AnsiString): AnsiString;
+begin
+  if aValue = '' then
+    Exit(aValue);
+  if (aValue[1] = aValue[Length(aValue)]) and ((aValue[1] = '''') or (aValue[1] = '"')) then
+    Result := Copy(aValue, 2, Length(aValue) - 2);
 end;
 
 

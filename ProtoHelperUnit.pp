@@ -142,19 +142,11 @@ type
     function GetPointerByIndex(Index: Integer): Pointer;
     procedure SetPointerByIndex(Index: Integer; AValue: Pointer);
 
-  protected
-    property PointerByIndex[Index: Integer]: Pointer read GetPointerByIndex
-  write SetPointerByIndex;
-
-    procedure SaveToStream(Stream: TProtoStreamWriter);  virtual; abstract;
-    function LoadFromStream(Stream: TProtoStreamReader; Len: Integer): Boolean;  virtual; abstract;
   public
-    constructor Create(NumObject: Integer);
-    destructor Destroy; override;
+    property PointerByIndex[Index: Integer]: Pointer read GetPointerByIndex write SetPointerByIndex;
 
-    function LoadFromString(Str: AnsiString): Boolean; virtual;
-    function LoadFromStream(Stream: TStream): Boolean; virtual;
-    procedure SaveToStream(Stream: TStream);  virtual; abstract;
+    constructor Create;
+    destructor Destroy; override;
   end;
 
   { EBaseOneOf }
@@ -180,6 +172,8 @@ procedure SaveAnsiString(Stream: TProtoStreamWriter; const Data: AnsiString;
   const TagID: Integer);
 procedure SaveBoolean(Stream: TProtoStreamWriter; const Data: Boolean;
     const TagID: Integer);
+procedure SaveByte(Stream: TProtoStreamWriter; const Data: Byte;
+    const TagID: Integer);
 
 function LoadSingle(Stream: TProtoStreamReader): Single;
 function LoadDouble(Stream: TProtoStreamReader): Double;
@@ -189,6 +183,7 @@ function LoadUInt32(Stream: TProtoStreamReader): UInt32;
 function LoadUInt64(Stream: TProtoStreamReader): UInt64;
 function LoadAnsiString(Stream: TProtoStreamReader): AnsiString;
 function LoadBoolean(Stream: TProtoStreamReader): Boolean;
+function LoadByte(Stream: TProtoStreamReader): Byte;
 
 procedure SaveRepeatedSingle(Stream: TProtoStreamWriter;
   const Data: TSingles;
@@ -215,6 +210,9 @@ procedure SaveRepeatedAnsiString(
 procedure SaveRepeatedBoolean(Stream: TProtoStreamWriter;
     const Data: TBooleans;
     const TagID: Integer);
+procedure SaveRepeatedByte(Stream: TProtoStreamWriter;
+  const Data: TBytes;
+  const TagID: Integer);
 
 function LoadRepeatedSingle(Stream: TProtoStreamReader;
     Data: TSingles): Boolean;
@@ -232,6 +230,8 @@ function LoadRepeatedAnsiString(Stream: TProtoStreamReader;
      Data: TAnsiStrings): Boolean;
 function LoadRepeatedBoolean(Stream: TProtoStreamReader;
     Data: TBooleans): Boolean;
+function LoadRepeatedByte(Stream: TProtoStreamReader;
+    Data: TBytes): Boolean;
 
 procedure SaveMessage(Stream: TProtoStreamWriter;
     const Data: TBaseMessage;
@@ -243,7 +243,6 @@ generic procedure SaveRepeatedMessage<TMessage>(Stream: TProtoStreamWriter;
     const TagID: Integer);
 generic function LoadRepeatedMessage<TMessage>(Stream: TProtoStreamReader;
     Data: specialize TObjectList<TMessage>): Boolean;
-
 
 implementation
 
@@ -397,6 +396,8 @@ begin
   if _ObjectIndex = -1 then
   begin
     _Data := AValue;
+    if AValue = nil then
+      Exit;
     _ObjectIndex := Index;
     Exit;
 
@@ -414,7 +415,7 @@ begin
     raise EBaseOneOf.CreateTwoValueAreSet;
 end;
 
-constructor TBaseOneOf.Create(NumObject: Integer);
+constructor TBaseOneOf.Create;
 begin
   inherited Create;
 
@@ -425,25 +426,6 @@ destructor TBaseOneOf.Destroy;
 begin
 
   inherited Destroy;
-end;
-
-function TBaseOneOf.LoadFromString(Str: AnsiString): Boolean;
-begin
-  Result := self.LoadFromStream(TStringStream.Create(Str));
-
-end;
-
-function TBaseOneOf.LoadFromStream(Stream: TStream): Boolean;
-var
-  ProtoStream: TProtoStreamReader;
-
-begin
-  ProtoStream := TProtoStreamReader.Create(Stream);
-
-  Result := Self.LoadFromStream(ProtoStream, Stream.Size);
-
-  ProtoStream.Free;
-
 end;
 
 { TBaseMessage }
@@ -485,6 +467,25 @@ begin
   SizeNode := Stream.AddIntervalNode;
    for SingleData in Data do
       Stream.WriteRawByte(Ord(SingleData));
+
+   SizeNode.WriteLength(SizeNode.TotalSize);
+
+end;
+
+procedure SaveRepeatedByte(Stream: TProtoStreamWriter; const Data: TBytes;
+  const TagID: Integer);
+var
+  SingleData: Byte;
+  SizeNode: TLinkListNode;
+
+begin
+  if Data = nil then
+    Exit;
+
+  Stream.WriteTag(TagID, 2);
+  SizeNode := Stream.AddIntervalNode;
+ for SingleData in Data do
+    Stream.WriteRawByte(Ord(SingleData));
 
    SizeNode.WriteLength(SizeNode.TotalSize);
 
@@ -652,6 +653,26 @@ begin
   while Stream.Position < StartPos + Len do
   begin
     NewDatum := Stream.ReadBoolean;
+    Data.Add(NewDatum);
+
+  end;
+
+  Result := StartPos + Len = Stream.Position;
+end;
+
+function LoadRepeatedByte(Stream: TProtoStreamReader; Data: TBytes): Boolean;
+var
+  Len: uInt32;
+  NewDatum: Byte;
+  StartPos: Integer;
+
+begin
+  Len := Stream.ReadUInt32;
+  StartPos := Stream.Position;
+
+  while Stream.Position < StartPos + Len do
+  begin
+    NewDatum := Stream.ReadByte;
     Data.Add(NewDatum);
 
   end;
@@ -920,6 +941,14 @@ begin
 
 end;
 
+procedure SaveByte(Stream: TProtoStreamWriter; const Data: Byte;
+  const TagID: Integer);
+begin
+  if Data <> 0 then
+    Stream.WriteByte(TagID, Data);
+
+end;
+
 function LoadSingle(Stream: TProtoStreamReader): Single;
 begin
   Result := Stream.ReadSingle;
@@ -964,6 +993,12 @@ end;
 function LoadBoolean(Stream: TProtoStreamReader): Boolean;
 begin
   Result := Stream.ReadBoolean;
+
+end;
+
+function LoadByte(Stream: TProtoStreamReader): Byte;
+begin
+  Result := Stream.ReadByte;
 
 end;
 

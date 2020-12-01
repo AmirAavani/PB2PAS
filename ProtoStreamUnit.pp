@@ -117,8 +117,10 @@ type
     procedure WriteFixed64(FieldNumber: Integer; Value: Int64);
     (* Write a fixed32 field, including tag. *)
     procedure WriteFixed32(FieldNumber: Integer; Value: Integer);
-    (* Write a boolean field, including tag. *)
+    (* Write a Boolean field, including tag. *)
     procedure WriteBoolean(FieldNumber: Integer; Value: Boolean);
+    (* Write a byte field, including tag. *)
+    procedure WriteByte(FieldNumber: Integer; Value: Byte);
     (* Write a string field, including tag. *)
     procedure WriteString(FieldNumber: Integer; const Value: AnsiString);
 //    (*  Write a unsigned int32 field, including tag. *)
@@ -155,6 +157,7 @@ type
 
     function ReadAnsiString: AnsiString;
     function ReadBoolean: Boolean;
+    function ReadByte: Byte;
     function ReadDouble: Double;
     function ReadRawVarint64: Int64;
     function ReadRawVarint32: Int32;
@@ -296,6 +299,12 @@ var
 begin
   Self.ReadRawData(@b, 1);
   Result := b <> 0;
+
+end;
+
+function TProtoStreamReader.ReadByte: Byte;
+begin
+  Self.ReadRawData(@Result, 1);
 
 end;
 
@@ -661,6 +670,13 @@ procedure TProtoStreamWriter.WriteBoolean(FieldNumber: Integer; Value: Boolean);
 begin
   WriteTag(FieldNumber, WIRETYPE_VARINT);
   WriteRawByte(Ord(Value));
+
+end;
+
+procedure TProtoStreamWriter.WriteByte(FieldNumber: Integer; Value: Byte);
+begin
+  WriteTag(FieldNumber, WIRETYPE_VARINT);
+  WriteRawByte(Value);
 
 end;
 

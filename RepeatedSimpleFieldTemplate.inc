@@ -1,5 +1,5 @@
 const
- DeclareRepeatedSimpleFieldTemplate : AnsiString =
+ DeclareRepeatedSimpleFieldTemplate: AnsiString =
   '  // Methods for repeated [[Field.PackageNameWithDot]][[Field.Type]] [[Field.Name]] = [[Field.Number]];' + sLineBreak +
   '  public type' + sLineBreak +
   '    T[[CanName]] =  T[[Field.InnerFPCType]]s;' + sLineBreak + sLineBreak +
