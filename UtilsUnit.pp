@@ -7,14 +7,10 @@ interface
 uses
   PBDefinitionUnit, Classes, SysUtils, fgl;
 
-type
-  TProtos = specialize TFPGList<TProto>;
-
 function Canonicalize(AName: AnsiString): AnsiString;
 function FormatString(const FieldType: AnsiString): AnsiString;
 function GetUnitName(const Filename: AnsiString): AnsiString;
 function GetNonRepeatedType4FPC(TypeName: AnsiString): AnsiString;
-function IsSimpleType(MessageField: TMessageField; FieldProto: TProto; RelatedProtos: TProtos): Boolean;
 function GetUnitName(MessageField: TMessageField; FieldProto: TProto; RelatedProtos: TProtos): AnsiString;
 function IsAnEnumType(MessageField: TMessageField; FieldProto: TProto; RelatedProtos: TProtos): Boolean;
 function IsOneOfType(MessageField: TMessageField; FieldProto: TProto; RelatedProtos: TProtos): Boolean;
@@ -88,58 +84,6 @@ begin
   end;
 end;
 
-function IsSimpleType(MessageField: TMessageField; FieldProto: TProto;
-  RelatedProtos: TProtos): Boolean;
-var
-  PackageName: AnsiString;
-  Parent: TParent;
-  P: TProto;
-
-begin
-  case MessageField.FieldType.ProtoType of
-    'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
-      , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
-      , 'bool' , 'string' , 'bytes': Exit(True);
-  end;
-
-  PackageName := MessageField.PackageName;
-  if PackageName = '' then
-  begin
-    Parent := MessageField.Parent;
-    while (Parent.Message <> nil) or (Parent.Proto <> nil) do
-    begin
-      if (Parent.Message <> nil) and (Parent.Message.Enums <> nil) then
-        if Parent.Message.Enums.ByName[MessageField.FieldType.ProtoType] <> nil then
-          Exit(True);
-      if (Parent.Proto <> nil) and (Parent.Proto.Enums <> nil) then
-        if Parent.Proto.Enums.ByName[MessageField.FieldType.ProtoType] <> nil then
-          Exit(True);
-
-      if Parent.Message <> nil then
-        Parent := Parent.Message.Parent
-      else
-        Break;
-
-    end;
-
-    if (FieldProto.Enums <> nil) and (FieldProto.Enums.ByName[MessageField.FieldType.ProtoType] <> nil) then
-      Exit(True);
-
-    Exit(False);
-  end;
-
-
-
-  for p in RelatedProtos do
-  begin
-    if p.PackageName <> PackageName then
-      Continue;
-    if p.Enums <> nil then
-      Exit(p.Enums.ByName[MessageField.FieldType.ProtoType] <> nil);
-  end;
-
-end;
-
 function GetUnitName(MessageField: TMessageField; FieldProto: TProto;
   RelatedProtos: TProtos): AnsiString;
 var
@@ -167,7 +111,7 @@ var
   P: TProto;
 
 begin
-  case MessageField.FieldType.ProtoType of
+  case MessageField.FieldType of
     'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
       , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
       , 'bool' , 'string' , 'bytes': Exit(False);
@@ -180,10 +124,10 @@ begin
     while (Parent.Message <> nil) or (Parent.Proto <> nil) do
     begin
       if (Parent.Message <> nil) and (Parent.Message.Enums <> nil) then
-        if Parent.Message.Enums.ByName[MessageField.FieldType.ProtoType] <> nil then
+        if Parent.Message.Enums.ByName[MessageField.FieldType] <> nil then
           Exit(True);
       if (Parent.Proto <> nil) and (Parent.Proto.Enums <> nil) then
-        if Parent.Proto.Enums.ByName[MessageField.FieldType.ProtoType] <> nil then
+        if Parent.Proto.Enums.ByName[MessageField.FieldType] <> nil then
           Exit(True);
 
       if Parent.Message <> nil then
@@ -193,7 +137,7 @@ begin
 
     end;
 
-    if (FieldProto.Enums <> nil) and (FieldProto.Enums.ByName[MessageField.FieldType.ProtoType] <> nil) then
+    if (FieldProto.Enums <> nil) and (FieldProto.Enums.ByName[MessageField.FieldType] <> nil) then
       Exit(True);
 
     Exit(False);
@@ -204,7 +148,7 @@ begin
     if p.PackageName <> PackageName then
       Continue;
     if p.Enums <> nil then
-      Exit(p.Enums.ByName[MessageField.FieldType.ProtoType] <> nil);
+      Exit(p.Enums.ByName[MessageField.FieldType] <> nil);
   end;
 
   Result := False;
@@ -218,7 +162,7 @@ var
   P: TProto;
 
 begin
-  case MessageField.FieldType.ProtoType of
+  case MessageField.FieldType of
     'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
       , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
       , 'bool' , 'string' , 'bytes': Exit(False);
@@ -274,7 +218,7 @@ var
   Parent: TParent;
 
 begin
-  Result := aMap.FPCType;
+  Result := aMap.FPCTypeName;
   Parent := aMap.Parent;
 
   while Parent.Message <> nil do

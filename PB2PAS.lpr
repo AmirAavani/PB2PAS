@@ -4,18 +4,24 @@ program PB2PAS;
 {$MODESWITCH ADVANCEDRECORDS}
 uses
   cthreads, Classes, sysutils, ParameterManagerUnit, PBParserUnit, StringUnit,
-  UtilsUnit, PBDefinitionUnit, PBCodeGenerator, PBCodeGeneratorUnit,
-  ProtoHelperUnit, ALoggerUnit, fgl, PBTypeUnit, PBOptionUnit, ObjectListUnit;
+  UtilsUnit, PBDefinitionUnit, PBCodeGeneratorUnit,
+  ProtoHelperUnit, ALoggerUnit, fgl, PBOptionUnit, ObjectListUnit;
 
 
-type
-  TIntIntMap = specialize TFPGMap<Integer, Integer>;
+var
+  ProtoMap: TProtoMap;
+  i: Integer;
 
 begin
   WriteLn('<A>');
-  WriteLn(GetRunTimeParameterManager.ValueByName['--InputFile'].AsAnsiString);
 
-  PBCodeGenerator.GenerateCode(GetRunTimeParameterManager.ValueByName['--InputFile'].AsAnsiString);
+  ProtoMap := TBaseProtoParser.ParseAll(
+    GetRunTimeParameterManager.ValueByName['--InputFile'].AsAnsiString);
+
+  for i := 0 to ProtoMap.Count - 1 do
+    WriteLn(ProtoMap.Data[i].ToXML);
+
+  TPBBaseCodeGenerator.GenerateCode(ProtoMap);
 
   WriteLn('</A>');
 end.

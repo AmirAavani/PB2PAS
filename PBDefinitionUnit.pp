@@ -5,7 +5,7 @@ unit PBDefinitionUnit;
 interface
 
 uses
-  StreamUnit, PBTypeUnit, PBOptionUnit, ObjectListUnit, Classes, SysUtils, fgl;
+  StreamUnit, PBOptionUnit, ObjectListUnit, Classes, SysUtils, fgl;
 
 type
   TIntList = specialize TFPGList<Integer>;
@@ -14,7 +14,10 @@ type
   TMessage = class;
   TImports = class;
   TProto = class;
+  TProtos = specialize TFPGList<TProto>;
+
   TOneOf = class;
+  TType = AnsiString;
 
   TParent = record
     OneOf: TOneOf;
@@ -22,37 +25,59 @@ type
     Proto: TProto;
   end;
 
-  function CreateParent(anOneOf: TOneOf; aMessage: TMessage; aProto: TProto): TParent;
-
 type
+
+  { TPBBaseType }
+
+  TPBBaseType = class(TObject)
+  private
+    function GetFPCTypeName: AnsiString;
+
+  protected
+    FParent: TParent;
+    FName: AnsiString;
+    FOptions: TOptions;
+
+  public
+    property Parent: TParent read FParent;
+    property Name: AnsiString read FName;
+    property Options: TOptions read FOptions;
+    property FPCTypeName: AnsiString read GetFPCTypeName;
+
+    constructor Create(_Name: AnsiString; _Options: TOptions; _Parent: TParent);
+    function ToXML: AnsiString; virtual;
+
+  end;
 
   { TMessageField }
 
   TMessageField = class(TObject)
   private
     function GetCanonicalizeName: AnsiString;
+
   protected
     FParent: TParent;
     FFieldNumber: Integer;
     FIsRepeated: Boolean;
-    FFieldType: TBaseType;
+    FFieldType: TType;
+    // FFieldPBType: TPBBaseType;
     FName: AnsiString;
     FOptions: TOptions;
 
     function GetFieldNumber: Integer; virtual;
-    function GetFieldType: TBaseType; virtual;
+    function GetFieldType: TType; virtual;
     function GetIsRepeated: Boolean; virtual;
     function GetCanonicalizeFullName: AnsiString; virtual;
     function GetName: AnsiString; virtual;
     function GetOptions: TOptions;  virtual;
     // Returns the translation of FieldType to FPC.
-    function GetFPCType: AnsiString;  virtual;
+    function GetFPCTypeName: AnsiString;  virtual;
     function GetPackageName: AnsiString; virtual;
   public
     property Parent: TParent read FParent;
     property IsRepeated: Boolean read GetIsRepeated;
-    property FieldType: TBaseType read GetFieldType;
-    property FPCType: AnsiString read GetFPCType;
+    property FieldType: TType read GetFieldType;
+    property FPCTypeName: AnsiString read GetFPCTypeName;
     property PackageName: AnsiString read GetPackageName;
     property Name: AnsiString read GetName;
     property CanonicalizeName: AnsiString read GetCanonicalizeName;
@@ -60,15 +85,57 @@ type
     property FieldNumber: Integer read GetFieldNumber;
     property Options: TOptions read GetOptions;
 
-    constructor Create(_Name: AnsiString; _FieldType: TBaseType; _IsRepeated: Boolean;
+    constructor Create(_Name: AnsiString; _FieldType: TType; _IsRepeated: Boolean;
       _FieldNumber: Integer; _Options: TOptions; _Parent: TParent);
     destructor Destroy; override;
 
     function ToXML: AnsiString; virtual;
+
+    function HasSimpleType(Proto: TProto; RelatedProtos: TProtos): Boolean; virtual;
   end;
 
   TMessageFields = specialize TObjectList<TMessageField>;
 
+  { TEnumField }
+
+  TEnumField = class(TObject)
+  private
+    FName: AnsiString;
+    FOptions: TOptions;
+    FValue: Integer;
+    FEnumName: AnsiString;
+    function GetFPCValue: AnsiString;
+
+  public
+    property EnumName: AnsiString read FEnumName;
+    property Name: AnsiString read FName;
+    property Value: Integer read FValue;
+    property Options: specialize TObjectList<TOption> read FOptions;
+    property FPCValue: AnsiString read GetFPCValue;
+
+    constructor Create(_EnumName, _Name: AnsiString; _Options: TOptions; _Value: Integer);
+    destructor Destroy; override;
+    function ToXML: AnsiString;
+
+  end;
+
+  TEnumFields = specialize TObjectList<TEnumField>;
+
+  { TEnum }
+
+  TEnum = class(TPBBaseType)
+  protected
+    FAllFields: TEnumFields;
+
+  public
+    property AllFields: TEnumFields read FAllFields;
+
+    constructor Create(_Name: AnsiString; _Options: TOptions;
+        _EnumFields: TEnumFields; _Parent: TParent);
+    destructor Destroy; override;
+
+    function ToXML: AnsiString; override;
+  end;
 
   TEnums = specialize TObjectList<TEnum>;
 
@@ -79,9 +146,9 @@ type
     function GetCanonicalizeFullName: AnsiString; override;
 
   public
-    constructor Create(_Name: AnsiString; _OneOfFieldType: TBaseType;
+    constructor Create(_Name: AnsiString; _OneOfFieldType: TType;
          _IsRepeated: Boolean; _FieldNumber: Integer; _Options: TOptions;
-         ParentOneOf: TOneOf);
+         _Parent: TOneOf);
     function ToXML: AnsiString; override;
 
   end;
@@ -102,6 +169,7 @@ type
     destructor Destroy; override;
 
     function ToXML: AnsiString;override;
+    function HasSimpleType(Proto: TProto; RelatedProtos: TProtos): Boolean; override;
   end;
 
   TOneOfs = specialize TObjectList<TOneOf>;
@@ -110,22 +178,27 @@ type
 
   TMap = class(TMessageField)
   private
-    FKeyType: TBaseType;
-    FValueType: TBaseType;
+    FKeyType: TType;
+    FValueType: TType;
+    FKeyPBType: TPBBaseType;
+    FValuePBType: TPBBaseType;
 
-    function GetFieldType: TBaseType; override;
+    function GetFieldType: TType; override;
     // Returns the translation of FieldType to FPC.
-    function GetFPCType: AnsiString; override;
+    function GetFPCTypeName: AnsiString; override;
 
   public
-    property KeyType: TBaseType read FKeyType;
-    property ValueType: TBaseType read FValueType;
+    property KeyType: TType read FKeyType;
+    property ValueType: TType read FValueType;
+    property KeyPBType: TPBBaseType read FKeyPBType;
+    property ValuePBType: TPBBaseType read FValuePBType;
 
-    constructor Create(_Name: AnsiString; _FieldNumber: Integer; _KeyType, _ValueType: TBaseType;
+    constructor Create(_Name: AnsiString; _FieldNumber: Integer; _KeyType, _ValueType: TType;
            _Options: TOptions; _Parent: TMessage);
     destructor Destroy; override;
 
     function ToXML: AnsiString; override;
+    function HasSimpleType(Proto: TProto; RelatedProtos: TProtos): Boolean; override;
   end;
 
 
@@ -142,9 +215,9 @@ type
     FName: AnsiString;
     FParent: TParent;
 
-    MessageClassName: AnsiString;
+    // MessageClassName: AnsiString;
 
-    function GetFPCType: AnsiString;
+    function GetFPCTypeName: AnsiString;
     procedure PrepareForCodeGeneration(AllClassesNames, AllEnumsNames: TStringList);
   public
     // property Parent:
@@ -153,7 +226,7 @@ type
     property Messages: specialize TObjectList<TMessage> read FMessages;
     property Options: TOptions read FOptions;
     property Enums: TEnums read FEnums;
-    property FPCType: AnsiString read GetFPCType;
+    property FPCTypeName: AnsiString read GetFPCTypeName;
     property Parent: TParent read FParent;
 
     constructor Create(_Name: AnsiString;
@@ -185,28 +258,29 @@ type
 
   TProto = class(TObject)
   private
-    Filename: AnsiString;
-    FPackageName: AnsiString;
-    FSyntax: AnsiString;
+    FOtherParams: TStringList;
     FImports: TImports;
     FOptions: TOptions;
     FMessages: TMessages;
     FEnums: TEnums;
+    function GetInputProtoFilename: AnsiString;
     function GetOutputUnitName: AnsiString;
+    function GetPackageName: AnsiString;
+    function GetSyntax: AnsiString;
 
+    function GetValueFromOtherParams(ParamName: AnsiString): AnsiString;
   public
     property Imports: TImports read FImports;
     property Options: TOptions read FOptions;
     property Messages: TMessages read FMessages;
     property Enums: TEnums read FEnums;
-    property Syntax: AnsiString read FSyntax;
-    property InputProtoFilename: AnsiString read Filename;
-    property PackageName: AnsiString read FPackageName;
+    property Syntax: AnsiString read GetSyntax;
+    property InputProtoFilename: AnsiString read GetInputProtoFilename;
+    property PackageName: AnsiString read GetPackageName;
     property OutputUnitName: AnsiString read GetOutputUnitName;
 
-    constructor Create(_Filename: AnsiString; _Syntax: AnsiString;
-      _Imports: TImports; _PackageName: AnsiString; _Options: TOptions;
-  _Messages: TMessages; _Enums: TEnums);
+    constructor Create(_Imports: TImports; _Options: TOptions;
+  _Messages: TMessages; _Enums: TEnums; OtherParams: TStringList);
     destructor Destroy; override;
 
     function ToXML: AnsiString;
@@ -222,6 +296,10 @@ type
 
   TStrLit = AnsiString;
   TConstant = AnsiString;
+  TProtoMap = specialize TFPGMap<AnsiString, TProto>;
+
+function CreateParent(anOneOf: TOneOf; aMessage: TMessage; aProto: TProto): TParent;
+
 
 implementation
 uses
@@ -231,8 +309,96 @@ function CreateParent(anOneOf: TOneOf; aMessage: TMessage; aProto: TProto): TPar
 begin
   Result.OneOf := anOneOf;
   Result.Message := aMessage;
-  Result.Proto := aProto
-  ;
+  Result.Proto := aProto;
+
+end;
+
+{ TPBBaseType }
+
+function GetFPCTypeName(PBTypeName: AnsiString; IsRepeated: Boolean): AnsiString;
+begin
+  if IsRepeated then
+    Result := 'T' + Canonicalize(PBTypeName)
+  else
+    Result := GetNonRepeatedType4FPC(PBTypeName);
+
+end;
+
+constructor TPBBaseType.Create(_Name: AnsiString; _Options: TOptions;
+  _Parent: TParent);
+begin
+  inherited Create;
+
+  FParent := _Parent;
+  FOptions := _Options;
+  FName := _Name;
+
+end;
+
+function TPBBaseType.ToXML: AnsiString;
+begin
+  Result := Format('<%s Name= "%s">%s',
+    [Self.ClassName, FName, FOptions.ToXML]);
+
+end;
+
+{ TEnum }
+
+constructor TEnum.Create(_Name: AnsiString; _Options: TOptions;
+  _EnumFields: TEnumFields; _Parent: TParent);
+begin
+  inherited Create(_Name, _Options, _Parent);
+
+  FParent := _Parent;
+  FAllFields := _EnumFields;
+
+end;
+
+destructor TEnum.Destroy;
+begin
+  FOptions.Free;
+
+  inherited Destroy;
+end;
+
+function TEnum.ToXML: AnsiString;
+begin
+  Result := Format('<TEnum Name= "%s">%s',
+    [Name, Options.ToXML]);
+  Result += AllFields.ToXML;
+  Result += Format('</TEnum>', []);
+end;
+
+{ TEnumField }
+
+function TEnumField.GetFPCValue: AnsiString;
+begin
+  Result := Format('%s_%s', [Canonicalize(EnumName), Canonicalize(Self.Name)]);
+end;
+
+constructor TEnumField.Create(_EnumName, _Name: AnsiString; _Options: TOptions;
+  _Value: Integer);
+begin
+  inherited Create;
+
+  FEnumName := _EnumName;
+  FName := _Name;
+  FOptions := _Options;
+  FValue := _Value;
+
+end;
+
+destructor TEnumField.Destroy;
+begin
+  FOptions.Free;
+
+  inherited Destroy;
+end;
+
+function TEnumField.ToXML: AnsiString;
+begin
+  Result := Format('<EnumField Name= "%s" Value="%d">%s</EnumField>', [Name, Value, Options.ToXML]);
+
 end;
 
 { TImports }
@@ -269,38 +435,51 @@ end;
 
 { TMap }
 
-function TMap.GetFieldType: TBaseType;
+function TMap.GetFieldType: TType;
 begin
-  Result := TBaseType.Create(Format('map<%s, %s>', [FKeyType, FValueType]));
+  Result := Format('map<%s, %s>', [FKeyType, FValueType]);
 
 end;
 
-function TMap.GetFPCType: AnsiString;
+function TMap.GetFPCTypeName: AnsiString;
 begin
-  Result := Format('T%s2%sMap', [KeyType, ValueType]);
+  Result := Format('T%s2%sMap', [Canonicalize(KeyType), Canonicalize(ValueType)]);
 
 end;
 
 constructor TMap.Create(_Name: AnsiString; _FieldNumber: Integer; _KeyType,
-  _ValueType: TBaseType; _Options: TOptions; _Parent: TMessage);
+  _ValueType: TType; _Options: TOptions; _Parent: TMessage);
 begin
-   inherited Create(_Name, nil, false, _FieldNumber, _Options,
+   inherited Create(_Name, '', false, _FieldNumber, _Options,
      CreateParent(nil, _Parent, nil));
 
    FKeyType := _KeyType;
    FValueType := _ValueType;
+   FKeyPBType := TPBBaseType.Create(FKeyType, nil, CreateParent(nil, _Parent, nil));
+   FValuePBType := TPBBaseType.Create(FValueType, nil, CreateParent(nil, _Parent, nil));
 
 end;
 
 destructor TMap.Destroy;
 begin
   inherited Destroy;
+
 end;
 
 function TMap.ToXML: AnsiString;
 begin
-  Result := Format('<TMap Name = "%s" KeyType = "%s" ValueType = "%s" FieldNumber = "%d">%s</TMap>',
-   [GetName, FKeyType.ProtoType, FValueType.ProtoType, GetFieldNumber, GetOptions.ToXML]);
+  Result := Format('<TMap Name = "%s" FieldNumber = "%d">' + sLineBreak +
+                     '<Key Type = "%s" PPType = "%s"/>' + sLineBreak +
+                     '<Value Type = "%s" PPType = "%s"/>' + sLineBreak +
+                     '%s' + sLineBreak +
+                    '</TMap>',
+   [GetName, GetFieldNumber, KeyType, KeyPBType.FPCTypeName,
+     ValueType, ValuePBType.FPCTypeName, GetOptions.ToXML]);
+end;
+
+function TMap.HasSimpleType(Proto: TProto; RelatedProtos: TProtos): Boolean;
+begin
+  Result := False;
 end;
 
 { TOneOf }
@@ -324,7 +503,7 @@ end;
 constructor TOneOf.Create(_Name: AnsiString; _Fields: TOneOfFields;
   ParentMessage: TMessage);
 begin
-  inherited Create(_Name, TBaseType.Create(_Name), False, -1, TOptions.Create,
+  inherited Create(_Name, _Name, False, -1, TOptions.Create,
     CreateParent(nil, ParentMessage, nil));
 
   OneOfFields := _Fields;
@@ -353,6 +532,11 @@ begin
 
 end;
 
+function TOneOf.HasSimpleType(Proto: TProto; RelatedProtos: TProtos): Boolean;
+begin
+  Result := False;
+end;
+
 { TOneOfField }
 
 function TOneOfField.GetCanonicalizeFullName: AnsiString;
@@ -367,12 +551,12 @@ begin
   Result := Format('%s.%s', [ParentName, FieldName]);
 end;
 
-constructor TOneOfField.Create(_Name: AnsiString; _OneOfFieldType: TBaseType;
+constructor TOneOfField.Create(_Name: AnsiString; _OneOfFieldType: TType;
   _IsRepeated: Boolean; _FieldNumber: Integer; _Options: TOptions;
-  ParentOneOf: TOneOf);
+  _Parent: TOneOf);
 begin
   inherited Create(_Name, _OneOfFieldType, _IsRepeated, _FieldNumber, _Options,
-    CreateParent(ParentOneOf, nil, nil));
+    CreateParent(_Parent, nil, nil));
 
 end;
 
@@ -380,7 +564,7 @@ function TOneOfField.ToXML: AnsiString;
 begin
   Result:= Format('<TOneOfField Name = "%s" Type ="%s" FieldNumber = "%d"> %s </TOneOfField>',
    [Name,
-    FieldType.ProtoType,
+    FieldType,
     FieldNumber,
     Options.ToXML]);
 
@@ -405,7 +589,7 @@ begin
   FFields.Sort(@CompareMessageFields);
 end;
 
-function TMessage.GetFPCType: AnsiString;
+function TMessage.GetFPCTypeName: AnsiString;
 begin
   Result := 'T' + Canonicalize(Name);
 
@@ -459,20 +643,20 @@ begin
   Result := FFieldNumber;
 end;
 
-function TMessageField.GetFieldType: TBaseType;
+function TMessageField.GetFieldType: TType;
 var
   Parts: TStringList;
 
 begin
   Result := FFieldType;
-  if Pos('.', Result.ProtoType) = 0 then
+  if Pos('.', Result) = 0 then
     Exit;
 
   Parts := TStringList.Create;
   Parts.Delimiter:= '.';
-  Parts.DelimitedText := Result.ProtoType;
+  Parts.DelimitedText := Result;
 
-  Result := TBaseType.Create(Parts.Strings[Parts.Count - 1]);
+  Result := Parts.Strings[Parts.Count - 1];
   Parts.Free;
 
 end;
@@ -500,12 +684,12 @@ begin
 
 end;
 
-function TMessageField.GetFPCType: AnsiString;
+function TMessageField.GetFPCTypeName: AnsiString;
 var
   ThisFieldType: AnsiString;
 
 begin
-  ThisFieldType := FieldType.ProtoType;
+  ThisFieldType := FieldType;
 
   if IsRepeated then
     Result := 'T' + Canonicalize(FName)
@@ -519,12 +703,12 @@ var
   Parts: TStringList;
 
 begin
-  if Pos('.', FFieldType.ProtoType) = 0 then
+  if Pos('.', FFieldType) = 0 then
     Exit('');
 
   Parts := TStringList.Create;
   Parts.Delimiter:= '.';
-  Parts.DelimitedText := FFieldType.ProtoType;
+  Parts.DelimitedText := FFieldType;
   Parts.Delete(Parts.Count - 1);
 
   Result := JoinStrings(Parts, '.');
@@ -532,7 +716,7 @@ begin
   Parts.Free;
 end;
 
-constructor TMessageField.Create(_Name: AnsiString; _FieldType: TBaseType;
+constructor TMessageField.Create(_Name: AnsiString; _FieldType: TType;
   _IsRepeated: Boolean; _FieldNumber: Integer; _Options: TOptions;
   _Parent: TParent);
 begin
@@ -559,11 +743,61 @@ begin
   Result:= Format('<MessageField Name = "%s" IsRepeated = "%s" Type = "%s" FieldNumber = "%d"> %s</MessageField>'#10,
   [GetName,
     IfThen(IsRepeated, 'True', 'False'),
-    GetFieldType.ProtoType,
+    GetFieldType,
     GetFieldNumber,
     GetOptions.ToXML
   ]);
 
+end;
+
+function TMessageField.HasSimpleType(Proto: TProto; RelatedProtos: TProtos
+  ): Boolean;
+var
+  TmpParent: TParent;
+  P: TProto;
+
+begin
+  case FieldType of
+    'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
+      , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
+      , 'bool' , 'string' , 'bytes':
+      Exit(True);
+  end;
+
+  if PackageName = '' then
+  begin
+    TmpParent := Parent;
+    while (TmpParent.Message <> nil) or (TmpParent.Proto <> nil) do
+    begin
+      if (TmpParent.Message <> nil) and (TmpParent.Message.Enums <> nil) then
+        if TmpParent.Message.Enums.ByName[FieldType] <> nil then
+          Exit(True);
+      if (TmpParent.Proto <> nil) and (TmpParent.Proto.Enums <> nil) then
+        if TmpParent.Proto.Enums.ByName[FieldType] <> nil then
+          Exit(True);
+
+      if TmpParent.Message <> nil then
+        TmpParent := TmpParent.Message.Parent
+      else
+        Break;
+
+    end;
+
+    if (Proto.Enums <> nil) and (Proto.Enums.ByName[FieldType] <> nil) then
+      Exit(True);
+
+    Exit(False);
+  end;
+
+  for p in RelatedProtos do
+  begin
+    if p.PackageName <> PackageName then
+      Continue;
+    if p.Enums <> nil then
+      Exit(p.Enums.ByName[FieldType] <> nil);
+  end;
+
+  raise Exception.Create('Someting went wrong!');
 end;
 
 { TProto }
@@ -574,19 +808,46 @@ begin
 
 end;
 
-constructor TProto.Create(_Filename: AnsiString; _Syntax: AnsiString;
-  _Imports: TImports; _PackageName: AnsiString; _Options: TOptions;
-  _Messages: TMessages; _Enums: TEnums);
+function TProto.GetInputProtoFilename: AnsiString;
+begin
+  Result := GetValueFromOtherParams('InputProtoFilename:');
+
+end;
+
+function TProto.GetPackageName: AnsiString;
+begin
+  Result := GetValueFromOtherParams('package:');
+
+end;
+
+function TProto.GetSyntax: AnsiString;
+begin
+  Result := GetValueFromOtherParams('syntax:');
+
+end;
+
+function TProto.GetValueFromOtherParams(ParamName: AnsiString): AnsiString;
+var
+  Str: AnsiString;
+
+begin
+  for Str in FOtherParams do
+    if IsPrefix(ParamName, Str) then
+      Exit(Copy(Str, Length(ParamName) + 1, Length(Str)));
+
+  Result := '';
+end;
+
+constructor TProto.Create(_Imports: TImports; _Options: TOptions;
+  _Messages: TMessages; _Enums: TEnums; OtherParams: TStringList);
 begin
   inherited Create;
 
-  Filename := _Filename;
-  FSyntax := _Syntax;
   FImports := _Imports;
-  FPackageName := _PackageName;
   FOptions := _Options;
   FMessages := _Messages;
   FEnums := _Enums;
+  FOtherParams := OtherParams;
 
 end;
 
@@ -596,6 +857,7 @@ begin
   Options.Free;
   Messages.Free;
   Enums.Free;
+  FOtherParams.Free;
 
   inherited Destroy;
 end;
@@ -603,8 +865,8 @@ end;
 function TProto.ToXML: AnsiString;
 begin
   Result := Format('<TProto FileName = "%s" Path= "%s" Package = "%s" >'#10'%s%s%s%s </TProto>'#10,
-  [ExtractFileName(Filename),
-   ExtractFileDir(Filename),
+  [ExtractFileName(InputProtoFilename),
+   ExtractFileDir(InputProtoFilename),
    PackageName,
    Options.ToXML,
    Imports.ToXML,

@@ -13,9 +13,12 @@ type
   { TBaseProtoParser }
 
   TBaseProtoParser = class(TObject)
+  private
     InputFilename: AnsiString;
   public
     class function GetParser(_InputFilename: AnsiString): TBaseProtoParser;
+    class function Parse(_InputFilename: AnsiString): TProto;
+    class function ParseAll(_InputFilename: AnsiString): TProtoMap;
 
     function ParseProto: TProto; virtual; abstract;
     destructor Destroy; override;
@@ -24,7 +27,7 @@ type
 implementation
 
 uses
-  UtilsUnit, StringUnit, PBTypeUnit, ALoggerUnit, PBOptionUnit;
+  UtilsUnit, StringUnit, ALoggerUnit, PBOptionUnit;
 
 type
   TTokenKind = (ttkStart, ttkDot, ttkOpenBrace, ttkCloseBrace, ttkOpenPar,
@@ -116,7 +119,7 @@ type
     function ParseIdent: TIdentifier;
     function ParseFieldNumber: Integer;
     function ParseFullIdent: TFullIdentifier;
-    function ParseType: TBaseType;
+    function ParseType: TType;
 
     function CollectUntil(EndTokenKind: TTokenKind): TTokenArray;
 
@@ -134,7 +137,7 @@ type
     function ParseImport: AnsiString;
     function ParseSyntax: Boolean;
     function ParseMessage(Parent: TParent): TMessage;
-    function ParseEnum: TEnum;
+    function ParseEnum(Parent: TParent): TEnum;
     function ParseEnumField(EnumName: AnsiString): TEnumField;
     function ParsePackage: AnsiString;
     function ParseOption(EndTokenTypes: array of TTokenKind): TOption;
@@ -510,33 +513,31 @@ begin
   inherited Destroy;
 end;
 
-function TProtoParser.ParseType: TBaseType;
+function TProtoParser.ParseType: TType;
  // type = "double" | "float" | "int32" | "int64" | "uint32" | "uint64"
  //     | "sint32" | "sint64" | "fixed32" | "fixed64" | "sfixed32" | "sfixed64"
  //     | "bool" | "string" | "bytes" | messageType | enumType
 
 var
-  ResultStr: AnsiString;
   Token: TToken;
 
 begin
   Token := Tokenizer.GetNextToken;
-  ResultStr := Token.TokenString;
+  Result := Token.TokenString;
   Token := Tokenizer.GetNextToken;
 
   while Token.Kind = ttkDot do
   begin
-    ResultStr += Token.TokenString;
+    Result += Token.TokenString;
 
     Token := Tokenizer.GetNextToken;
     if Token.Kind <> ttkIdentifier then
       raise EInvalidToken.Create(Token.TokenString, ttkIdentifier);
-    ResultStr += Token.TokenString;
+    Result += Token.TokenString;
 
     Token := Tokenizer.GetNextToken;
   end;
 
-  Result := TBaseType.Create(ResultStr);
   Tokenizer.Rewind();
 end;
 
@@ -750,6 +751,41 @@ begin
 
 end;
 
+class function TBaseProtoParser.Parse(_InputFilename: AnsiString): TProto;
+var
+  Parser: TBaseProtoParser;
+
+begin
+  Parser := TBaseProtoParser.GetParser(_InputFilename);
+
+  Result := Parser.ParseProto;
+
+  Parser.Free;
+end;
+
+class function TBaseProtoParser.ParseAll(_InputFilename: AnsiString): TProtoMap;
+
+  procedure RecParse(ProtoFile: AnsiString; ProtoMap: TProtoMap);
+  var
+    Proto: TProto;
+    Import: AnsiString;
+
+  begin
+    Proto := TBaseProtoParser.Parse(ProtoFile);
+    ProtoMap[ProtoFile] := Proto;
+
+    for Import in Proto.Imports do
+      if ProtoMap.IndexOf(Import) = -1 then
+        RecParse(Import, ProtoMap);
+  end;
+
+begin
+  Result := TProtoMap.Create;
+
+  RecParse(_InputFilename, Result);
+
+end;
+
 destructor TBaseProtoParser.Destroy;
 begin
   inherited Destroy;
@@ -799,7 +835,7 @@ begin
   while Token.Kind <> ttkCloseBrace do
   begin
     if Token.TokenString = 'enum' then
-      Enums.Add(ParseEnum)
+      Enums.Add(ParseEnum(CreateParent(nil, Result, nil)))
     else if Token.TokenString = 'message' then
       Messages.Add(Self.ParseMessage(CreateParent(nil, Result, Parent.Proto)))
     else if Token.TokenString = 'option' then
@@ -822,7 +858,7 @@ begin
 
 end;
 
-function TProto3Parser.ParseEnum: TEnum;
+function TProto3Parser.ParseEnum(Parent: TParent): TEnum;
 var
   Token: TToken;
   FName: AnsiString;
@@ -859,9 +895,8 @@ begin
     Token := Tokenizer.GetNextToken;
   end;
 
-  Result := TEnum.Create(FName, Options, EnumFields);
-  EnumFields.Clear;
-  EnumFields.Free;
+  Result := TEnum.Create(FName, Options, EnumFields, Parent);
+
 end;
 
 function TProto3Parser.ParseEnumField(EnumName: AnsiString): TEnumField;
@@ -1010,7 +1045,7 @@ end;
 function TProto3Parser.ParseOneOfField(ParentOneOf: TOneOf): TOneOfField;
 // oneofField = type fieldName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
 var
-  OneOfFieldType: TBaseType;
+  OneOfFieldType: TType;
   Name: AnsiString;
   FieldNumber: Integer;
   Options: TOptions;
@@ -1030,7 +1065,7 @@ end;
 
 function TProto3Parser.ParseMap(ParentMessage: TMessage): TMap;
 var
-  KeyType, ValueType: TBaseType;
+  KeyType, ValueType: TType;
   Name: AnsiString;
   FieldNumber: Integer;
   Options: TOptions;
@@ -1059,7 +1094,7 @@ function TProto3Parser.ParseMessageField(ParentMessage: TMessage
   ): TMessageField;
 var
   Name: AnsiString;
-  FieldType: TBaseType;
+  FieldType: TType;
   IsRepeated: Boolean;
   FieldNumber: Integer;
   Options: TOptions;
@@ -1250,7 +1285,7 @@ function TProto3Parser.ParseProto: TProto;
 var
   Token: TToken;
   Imports: TImports;
-  PackageName: AnsiString;
+  OtherParams: TStringList;
   Options: TOptions;
   Messages: TMessages;
   Enums: TEnums;
@@ -1259,24 +1294,31 @@ var
 // topLevelDef = message | enum | service
 begin
   // syntax is already processed.
+  OtherParams := TStringList.Create;
 
-  Token := Tokenizer.GetNextToken;
   Imports := TImports.Create;
   Options := TOptions.Create;
   Messages := TMessages.Create;
   Enums := TEnums.Create;
+
+  Result := TProto3.Create(Imports, Options, Messages, Enums, OtherParams);
+
+  OtherParams.Add('syntax:3');
+  OtherParams.Add('InputProtoFilename:'+ InputFilename);
+
+  Token := Tokenizer.GetNextToken;
   while Token.Kind <> ttkEOF do
   begin
     if Token.TokenString = 'import' then
       Imports.Add(ParseImport)
     else if Token.TokenString = 'package' then
-      PackageName := ParsePackage
+      OtherParams.Add('package:' + ParsePackage)
     else if Token.TokenString = 'option' then
       Options.Add(ParseOption(ttkSemiColon))
     else if Token.TokenString = 'message' then
       Messages.Add(ParseMessage(CreateParent(nil, nil, Result)))
     else if Token.TokenString = 'enum' then
-      Enums.Add(ParseEnum)
+      Enums.Add(ParseEnum(CreateParent(nil, nil, Result)))
     else if Token.TokenString = 'service' then
       raise ENotImplementedYet.Create('Service is not supported yet!')
     else
@@ -1284,7 +1326,6 @@ begin
     Token := Tokenizer.GetNextToken;
   end;
 
-  Result := TProto3.Create(InputFilename, '3', Imports, PackageName, Options, Messages, Enums);
 
 
 end;
