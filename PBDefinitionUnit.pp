@@ -37,14 +37,17 @@ type
     FParent: TParent;
     FName: AnsiString;
     FOptions: TOptions;
+    FIsRepeated: Boolean;
 
   public
     property Parent: TParent read FParent;
     property Name: AnsiString read FName;
     property Options: TOptions read FOptions;
     property FPCTypeName: AnsiString read GetFPCTypeName;
+    property IsRepeated: Boolean read FIsRepeated;
 
-    constructor Create(_Name: AnsiString; _Options: TOptions; _Parent: TParent);
+    constructor Create(_Name: AnsiString; _IsRepeated: Boolean;
+        _Options: TOptions; _Parent: TParent);
     function ToXML: AnsiString; virtual;
 
   end;
@@ -183,6 +186,7 @@ type
     FKeyPBType: TPBBaseType;
     FValuePBType: TPBBaseType;
 
+  protected
     function GetFieldType: TType; override;
     // Returns the translation of FieldType to FPC.
     function GetFPCTypeName: AnsiString; override;
@@ -315,23 +319,24 @@ end;
 
 { TPBBaseType }
 
-function GetFPCTypeName(PBTypeName: AnsiString; IsRepeated: Boolean): AnsiString;
+function TPBBaseType.GetFPCTypeName: AnsiString;
 begin
   if IsRepeated then
-    Result := 'T' + Canonicalize(PBTypeName)
+    Result := 'T' + Canonicalize(Name)
   else
-    Result := GetNonRepeatedType4FPC(PBTypeName);
+    Result := GetNonRepeatedType4FPC(Name);
 
 end;
 
-constructor TPBBaseType.Create(_Name: AnsiString; _Options: TOptions;
-  _Parent: TParent);
+constructor TPBBaseType.Create(_Name: AnsiString; _IsRepeated: Boolean;
+  _Options: TOptions; _Parent: TParent);
 begin
   inherited Create;
 
   FParent := _Parent;
   FOptions := _Options;
   FName := _Name;
+  FIsRepeated := _IsRepeated;
 
 end;
 
@@ -347,7 +352,7 @@ end;
 constructor TEnum.Create(_Name: AnsiString; _Options: TOptions;
   _EnumFields: TEnumFields; _Parent: TParent);
 begin
-  inherited Create(_Name, _Options, _Parent);
+  inherited Create(_Name, False, _Options, _Parent);
 
   FParent := _Parent;
   FAllFields := _EnumFields;
@@ -443,7 +448,8 @@ end;
 
 function TMap.GetFPCTypeName: AnsiString;
 begin
-  Result := Format('T%s2%sMap', [Canonicalize(KeyType), Canonicalize(ValueType)]);
+  Result := Format('T%s2%sMap', [
+    Canonicalize(KeyPBType.Name), Canonicalize(ValuePBType.Name)]);
 
 end;
 
@@ -455,8 +461,8 @@ begin
 
    FKeyType := _KeyType;
    FValueType := _ValueType;
-   FKeyPBType := TPBBaseType.Create(FKeyType, nil, CreateParent(nil, _Parent, nil));
-   FValuePBType := TPBBaseType.Create(FValueType, nil, CreateParent(nil, _Parent, nil));
+   FKeyPBType := TPBBaseType.Create(FKeyType, False, nil, CreateParent(nil, _Parent, nil));
+   FValuePBType := TPBBaseType.Create(FValueType, False, nil, CreateParent(nil, _Parent, nil));
 
 end;
 

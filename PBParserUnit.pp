@@ -410,7 +410,10 @@ var
 
 begin
   for TokenStr in TokenStrs do
-    Self.Expect(TokenStr);
+    if not Self.Expect(TokenStr) then
+      Exit(False);
+
+  Result := True;
 
 end;
 
@@ -420,7 +423,11 @@ var
 
 begin
   for TokenKind in Ts do
-    Self.Expect(TokenKind);
+    if not Self.Expect(TokenKind) then
+      Exit(False);
+
+  Result := True;
+
 end;
 
 function TTokenizer.Expect(const TokenStr: AnsiString): Boolean;
@@ -506,11 +513,13 @@ end;
 procedure TTokenArray.AddToken(aToken: TToken);
 begin
   Self.PushBack(aToken);
+
 end;
 
 destructor TTokenArray.Destroy;
 begin
   inherited Destroy;
+
 end;
 
 function TProtoParser.ParseType: TType;

@@ -311,7 +311,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       Unitcode.InterfaceCode.TypeList.Add('');
 
     // Forward Declarations:
-    // TODO(Amir): This can be removed.
+    // TODO(Amir): This can be improved.
     for Field in aMessage.Fields do
       if Field.ClassType = TOneOf then
       begin
@@ -320,6 +320,13 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         Unitcode.InterfaceCode.TypeList.Add('');
 
       end;
+    for i := 0 to aMessage.Messages.Count - 1 do
+    begin
+      Unitcode.InterfaceCode.TypeList.Add('%spublic type', [Indent]);
+      GenerateCodeForMessage(aMessage.Messages[i], Unitcode, Indent + '  ');
+
+    end;
+
 
     AllMaps := TStringList.Create;
     for Field in aMessage.Fields do
@@ -334,13 +341,6 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         Unitcode.InterfaceCode.TypeList.Add('');
 
       end;
-
-    for i := 0 to aMessage.Messages.Count - 1 do
-    begin
-      Unitcode.InterfaceCode.TypeList.Add('%spublic type', [Indent]);
-      GenerateCodeForMessage(aMessage.Messages[i], Unitcode, Indent + '  ');
-
-    end;
 
     for Field in aMessage.Fields do
       GenerateCodeForMessageField(Field, MessageClassName, Unitcode, Indent + '  ');
@@ -1099,8 +1099,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
   procedure GenerateDeclaration;
   begin
     Unitcode.InterfaceCode.TypeList.Add(Format('%s%s = class(specialize TFPGMap<%s, %s>)',
-      [Indent, Map.FPCTypeName, Canonicalize(Map.KeyType),
-      Canonicalize(Map.ValueType)]));
+      [Indent, Map.FPCTypeName, Map.KeyPBType.FPCTypeName,
+      Map.ValuePBType.FPCTypeName]));
     Unitcode.InterfaceCode.TypeList.Add(Format('%sprivate', [Indent]));
     Unitcode.InterfaceCode.TypeList.Add(Format('%s  function LoadFromStream(Stream: TProtoStreamReader): Boolean;',
       [Indent]));
@@ -1141,8 +1141,6 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
     Unitcode.ImplementationCode.Methods.Add(Format('procedure %s.SaveToStream(Stream: TProtoStreamWriter);', [MapClassName]));
     Unitcode.ImplementationCode.Methods.Add('var');
     Unitcode.ImplementationCode.Methods.Add('  i: Integer;');
-    Unitcode.ImplementationCode.Methods.Add(Format('  ki: %s;', [Map.KeyType]));
-    Unitcode.ImplementationCode.Methods.Add(Format('  vi: %s;', [Map.ValueType]));
     Unitcode.ImplementationCode.Methods.Add('  SizeNode: TLinkListNode;' + sLineBreak);
     Unitcode.ImplementationCode.Methods.Add('begin');
     Unitcode.ImplementationCode.Methods.Add('  if (Self = nil) or (Self.Count = 0) then');
@@ -1151,9 +1149,21 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
     Unitcode.ImplementationCode.Methods.Add('  SizeNode := Stream.AddIntervalNode;');
     Unitcode.ImplementationCode.Methods.Add('  for i := 0 to Self.Count - 1 do');
     Unitcode.ImplementationCode.Methods.Add('  begin');
-    Unitcode.ImplementationCode.Methods.Add('    ki := Self.Keys[i];');
-    Unitcode.ImplementationCode.Methods.Add('    vi := Self.Data[i];');
+    Unitcode.ImplementationCode.Methods.Add(Format('    Save%s(Stream, Self.Keys[i], 1);',
+       [Map.KeyPBType.FPCTypeName]));
+    case Map.ValuePBType.Name of
+      'double', 'float', 'int32', 'int64', 'uint32', 'uint64', 'sint32',
+      'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64', 'bool',
+      'string':
+          Unitcode.ImplementationCode.Methods.Add(Format('    Save%s(Stream, Self.Data[i], 2);',
+          [Map.ValuePBType.FPCTypeName]))
+    else
+      Unitcode.ImplementationCode.Methods.Add('    SaveMessage(Stream, Self.Data[i], 2);');
+    end;
+
     Unitcode.ImplementationCode.Methods.Add('  end;' + sLineBreak);
+    Unitcode.ImplementationCode.Methods.Add(
+      '    SizeNode.WriteLength(SizeNode.TotalSize);' + sLineBreak);
     Unitcode.ImplementationCode.Methods.Add('end;' + sLineBreak);
 
   end;
