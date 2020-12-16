@@ -78,7 +78,6 @@ begin
     'bool': Result := 'Boolean';
     'string': Result := 'AnsiString';
     'byte': Result := 'Byte';
-    'bytes': Result := 'Byte';
     else
       Result := 'T' + Canonicalize(TypeName);
   end;
@@ -114,7 +113,7 @@ begin
   case MessageField.FieldType of
     'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
       , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
-      , 'bool' , 'string' , 'bytes': Exit(False);
+      , 'bool' , 'string' , 'byte', 'bytes': Exit(False);
   end;
 
   PackageName := MessageField.PackageName;
@@ -165,7 +164,7 @@ begin
   case MessageField.FieldType of
     'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
       , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
-      , 'bool' , 'string' , 'bytes': Exit(False);
+      , 'bool' , 'string' , 'byte', 'bytes': Exit(False);
   end;
 
   PackageName := MessageField.PackageName;

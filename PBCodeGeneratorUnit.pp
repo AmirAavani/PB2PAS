@@ -312,6 +312,22 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
 
     // Forward Declarations:
     // TODO(Amir): This can be improved.
+    Unitcode.InterfaceCode.TypeList.Add(Format('%s// Forward Declarations.', [Indent]));
+    for Field in aMessage.Fields do
+      if Field.ClassType = TOneOf then
+      begin
+        Unitcode.InterfaceCode.TypeList.Add(Format('%spublic type', [Indent]));
+        UnitCode.InterfaceCode.TypeList.Add(
+         Format('%s  %s = class;', [Indent, Field.FPCTypeName]));
+      end;
+    if aMessage.Messages.Count <> 0 then
+      Unitcode.InterfaceCode.TypeList.Add('%spublic type', [Indent]);
+
+    for i := 0 to aMessage.Messages.Count - 1 do
+      Unitcode.InterfaceCode.TypeList.Add('%s  %s = class;', [Indent,
+        aMessage.Messages[i].FPCTypeName]);
+     UnitCode.InterfaceCode.TypeList.Add('');
+
     for Field in aMessage.Fields do
       if Field.ClassType = TOneOf then
       begin
@@ -972,8 +988,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForOneOf(const OneOf: TOneOf;
       Unitcode.ImplementationCode.Methods.Add(Format('begin', []));
       if Field.HasSimpleType(Proto, RelatedProtos) then
         Unitcode.ImplementationCode.Methods.Add(
-          Format('  Result := %s(Self.GetPointerByIndex(%d)^)',
-            [Field.FPCTypeName, i]))
+          Format('  Result := %s(P%s(Self.GetPointerByIndex(%d))^)',
+            [Field.FPCTypeName, Field.FPCTypeName, i]))
       else
         Unitcode.ImplementationCode.Methods.Add(
           Format('  Result := %s(Self.GetPointerByIndex(%d))',
@@ -1044,14 +1060,14 @@ TODO(Amir): Implement this constrctor for OneOfs.
 
     Unitcode.ImplementationCode.Methods.Add(Format('destructor %s.Destroy;', [OneOfClassName]));
     Unitcode.ImplementationCode.Methods.Add(Format('begin', []));
-    Unitcode.ImplementationCode.Methods.Add(Format('  inherited Destroy;', []));
+    Unitcode.ImplementationCode.Methods.Add(Format('  inherited Destroy;' + sLineBreak, []));
     for Field in OneOf.Fields do
     begin
       if Field.HasSimpleType(Proto, RelatedProtos) then
-        Unitcode.ImplementationCode.Methods.Add(Format('  Dispose(P%s(%s));',
-        [Field.FPCTypeName, Canonicalize(Field.Name)]))
+        Unitcode.ImplementationCode.Methods.Add(Format('  MaybeDispose(P%s(GetPointerByIndex(%d)));',
+        [Field.FPCTypeName, Field.FieldNumber]))
       else
-        Unitcode.ImplementationCode.Methods.Add(Format('  Get%s.Free;',
+        Unitcode.ImplementationCode.Methods.Add(Format('    Get%s.Free;',
         [Canonicalize(Field.Name)]));
 
     end;
@@ -1141,29 +1157,32 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
     Unitcode.ImplementationCode.Methods.Add(Format('procedure %s.SaveToStream(Stream: TProtoStreamWriter);', [MapClassName]));
     Unitcode.ImplementationCode.Methods.Add('var');
     Unitcode.ImplementationCode.Methods.Add('  i: Integer;');
-    Unitcode.ImplementationCode.Methods.Add('  SizeNode: TLinkListNode;' + sLineBreak);
+    Unitcode.ImplementationCode.Methods.Add('  aMsgSizeNode, TotalSizeNode: TLinkListNode;' + sLineBreak);
     Unitcode.ImplementationCode.Methods.Add('begin');
     Unitcode.ImplementationCode.Methods.Add('  if (Self = nil) or (Self.Count = 0) then');
     Unitcode.ImplementationCode.Methods.Add('    Exit;' + sLineBreak);
     Unitcode.ImplementationCode.Methods.Add(Format('  Stream.WriteTag(%d, 2);', [Map.FieldNumber]));
-    Unitcode.ImplementationCode.Methods.Add('  SizeNode := Stream.AddIntervalNode;');
+    Unitcode.ImplementationCode.Methods.Add('  TotalSizeNode := Stream.AddIntervalNode;');
     Unitcode.ImplementationCode.Methods.Add('  for i := 0 to Self.Count - 1 do');
     Unitcode.ImplementationCode.Methods.Add('  begin');
+    Unitcode.ImplementationCode.Methods.Add('    aMsgSizeNode := Stream.AddIntervalNode;');
     Unitcode.ImplementationCode.Methods.Add(Format('    Save%s(Stream, Self.Keys[i], 1);',
        [Map.KeyPBType.FPCTypeName]));
     case Map.ValuePBType.Name of
       'double', 'float', 'int32', 'int64', 'uint32', 'uint64', 'sint32',
       'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64', 'bool',
-      'string':
+      'string', 'byte':
           Unitcode.ImplementationCode.Methods.Add(Format('    Save%s(Stream, Self.Data[i], 2);',
           [Map.ValuePBType.FPCTypeName]))
     else
       Unitcode.ImplementationCode.Methods.Add('    SaveMessage(Stream, Self.Data[i], 2);');
     end;
+    Unitcode.ImplementationCode.Methods.Add(
+      '    aMsgSizeNode.WriteLength(aMsgSizeNode.TotalSize);' + sLineBreak);
 
     Unitcode.ImplementationCode.Methods.Add('  end;' + sLineBreak);
     Unitcode.ImplementationCode.Methods.Add(
-      '    SizeNode.WriteLength(SizeNode.TotalSize);' + sLineBreak);
+      '  TotalSizeNode.WriteLength(TotalSizeNode.TotalSize);' + sLineBreak);
     Unitcode.ImplementationCode.Methods.Add('end;' + sLineBreak);
 
   end;

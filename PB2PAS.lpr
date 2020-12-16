@@ -1,7 +1,6 @@
 program PB2PAS;
 
 {$mode objfpc}{$H+}
-{$MODESWITCH ADVANCEDRECORDS}
 uses
   cthreads, Classes, sysutils, ParameterManagerUnit, PBParserUnit, StringUnit,
   UtilsUnit, PBDefinitionUnit, PBCodeGeneratorUnit,

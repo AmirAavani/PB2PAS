@@ -244,6 +244,18 @@ generic procedure SaveRepeatedMessage<TMessage>(Stream: TProtoStreamWriter;
 generic function LoadRepeatedMessage<TMessage>(Stream: TProtoStreamReader;
     Data: specialize TObjectList<TMessage>): Boolean;
 
+procedure MaybeDispose(P: PDouble);
+procedure MaybeDispose(P: PSingle);
+procedure MaybeDispose(P: PInt16);
+procedure MaybeDispose(P: PInt32);
+procedure MaybeDispose(P: PInt64);
+procedure MaybeDispose(P: PUInt16);
+procedure MaybeDispose(P: PUInt32);
+procedure MaybeDispose(P: PUInt64);
+procedure MaybeDispose(P: PBoolean);
+procedure MaybeDispose(P: PAnsiString);
+procedure MaybeDispose(P: PByte);
+
 implementation
 
 { TBytes }
@@ -749,6 +761,83 @@ begin
   end;
 
   Result := StartPos + Len = Stream.Position;
+end;
+
+procedure MaybeDispose(P: PDouble);
+begin
+  if P <> nil then
+    Dispose(P);
+
+end;
+
+procedure MaybeDispose(P: PSingle);
+begin
+  if P <> nil then
+    Dispose(P);
+
+end;
+
+procedure MaybeDispose(P: PInt16);
+begin
+  if P <> nil then
+    Dispose(P);
+
+end;
+
+procedure MaybeDispose(P: PInt32);
+begin
+  if P <> nil then
+    Dispose(P);
+
+end;
+
+procedure MaybeDispose(P: PInt64);
+begin
+  if P <> nil then
+    Dispose(P);
+
+end;
+
+procedure MaybeDispose(P: PUInt16);
+begin
+  if P <> nil then
+    Dispose(P);
+
+end;
+
+procedure MaybeDispose(P: PUInt32);
+begin
+  if P <> nil then
+    Dispose(P);
+
+end;
+
+procedure MaybeDispose(P: PUInt64);
+begin
+  if P <> nil then
+    Dispose(P);
+
+end;
+
+procedure MaybeDispose(P: PBoolean);
+begin
+  if P <> nil then
+    Dispose(P);
+
+end;
+
+procedure MaybeDispose(P: PAnsiString);
+begin
+  if P <> nil then
+    Dispose(P);
+
+end;
+
+procedure MaybeDispose(P: PByte);
+begin
+  if P <> nil then
+    Dispose(P);
+
 end;
 
 procedure SaveRepeatedSingle(Stream: TProtoStreamWriter;

@@ -547,6 +547,10 @@ begin
     Token := Tokenizer.GetNextToken;
   end;
 
+  if Result = 'bytes' then
+  begin
+    raise EParseIntFailed.Create('Bytes fields are not supported yet. Please use string instead.');
+  end;
   Tokenizer.Rewind();
 end;
 
