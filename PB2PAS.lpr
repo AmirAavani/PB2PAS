@@ -23,5 +23,7 @@ begin
   TPBBaseCodeGenerator.GenerateCode(ProtoMap);
 
   WriteLn('</A>');
+
+  ProtoMap.Free;
 end.
 
