@@ -5,16 +5,17 @@ unit PBDefinitionUnit;
 interface
 
 uses
-  StreamUnit, PBOptionUnit, ObjectListUnit, Classes, SysUtils, fgl;
+  StreamUnit, PBOptionUnit, Classes, SysUtils, Generics.Collections,
+  ObjectListUnit, fgl;
 
 type
-  TIntList = specialize TFPGList<Integer>;
+  TIntList = specialize TList<Integer>;
   TIdentifier = AnsiString;
   TFullIdentifier = AnsiString;
   TMessage = class;
   TImports = class;
   TProto = class;
-  TProtos = specialize TFPGList<TProto>;
+  TProtos = specialize TList<TProto>;
 
   TOneOf = class;
   TType = AnsiString;
@@ -32,6 +33,10 @@ type
   TPBBaseType = class(TObject)
   private
     function GetFPCTypeName: AnsiString;
+    function GetFullName: AnsiString;
+    function GetIsSimple: Boolean;
+    function GetName: AnsiString;
+    function GetPackage: AnsiString;
 
   protected
     FParent: TParent;
@@ -41,7 +46,9 @@ type
 
   public
     property Parent: TParent read FParent;
-    property Name: AnsiString read FName;
+    property Name: AnsiString read GetName;
+    property FullName: AnsiString read GetFullName;
+    property PackageName: AnsiString read GetPackage;
     property Options: TOptions read FOptions;
     property FPCTypeName: AnsiString read GetFPCTypeName;
     property IsRepeated: Boolean read FIsRepeated;
@@ -49,6 +56,7 @@ type
     constructor Create(_Name: AnsiString; _IsRepeated: Boolean;
         _Options: TOptions; _Parent: TParent);
     function ToXML: AnsiString; virtual;
+    function IsSimpleType: Boolean;
 
   end;
 
@@ -113,7 +121,7 @@ type
     property EnumName: AnsiString read FEnumName;
     property Name: AnsiString read FName;
     property Value: Integer read FValue;
-    property Options: specialize TObjectList<TOption> read FOptions;
+    property Options: TOptions read FOptions;
     property FPCValue: AnsiString read GetFPCValue;
 
     constructor Create(_EnumName, _Name: AnsiString; _Options: TOptions; _Value: Integer);
@@ -328,6 +336,35 @@ begin
 
 end;
 
+function TPBBaseType.GetFullName: AnsiString;
+begin
+  Result := FName;
+end;
+
+function TPBBaseType.GetIsSimple: Boolean;
+begin
+  Result := False;
+  case Name of
+    'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
+      , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
+      , 'bool' , 'string', 'byte':
+      Result := True;
+  end;
+
+end;
+
+function TPBBaseType.GetName: AnsiString;
+begin
+  if 0 < Pos('.', GetFullName) then
+  Result := Copy(;
+
+end;
+
+function TPBBaseType.GetPackage: AnsiString;
+begin
+
+end;
+
 constructor TPBBaseType.Create(_Name: AnsiString; _IsRepeated: Boolean;
   _Options: TOptions; _Parent: TParent);
 begin
@@ -345,6 +382,52 @@ begin
   Result := Format('<%s Name= "%s">%s',
     [Self.ClassName, FName, FOptions.ToXML]);
 
+end;
+
+function TPBBaseType.IsSimpleType: Boolean;
+begin
+  case Name of
+    'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
+      , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
+      , 'bool' , 'string', 'byte':
+      Exit(True);
+  end;
+  {
+  if PackageName = '' then
+  begin
+    TmpParent := Parent;
+    while (TmpParent.Message <> nil) or (TmpParent.Proto <> nil) do
+    begin
+      if (TmpParent.Message <> nil) and (TmpParent.Message.Enums <> nil) then
+        if TmpParent.Message.Enums.ByName[FieldType] <> nil then
+          Exit(True);
+      if (TmpParent.Proto <> nil) and (TmpParent.Proto.Enums <> nil) then
+        if TmpParent.Proto.Enums.ByName[FieldType] <> nil then
+          Exit(True);
+
+      if TmpParent.Message <> nil then
+        TmpParent := TmpParent.Message.Parent
+      else
+        Break;
+
+    end;
+
+    if (Proto.Enums <> nil) and (Proto.Enums.ByName[FieldType] <> nil) then
+      Exit(True);
+
+    Exit(False);
+  end;
+
+  for p in RelatedProtos do
+  begin
+    if p.PackageName <> PackageName then
+      Continue;
+    if p.Enums <> nil then
+      Exit(p.Enums.ByName[FieldType] <> nil);
+  end;
+
+  raise Exception.Create('Someting went wrong!');
+   }
 end;
 
 { TEnum }

@@ -5,7 +5,7 @@ unit UtilsUnit;
 interface
 
 uses
-  PBDefinitionUnit, Classes, SysUtils, fgl;
+  PBDefinitionUnit, Classes, SysUtils;
 
 function Canonicalize(AName: AnsiString): AnsiString;
 function FormatString(const FieldType: AnsiString): AnsiString;

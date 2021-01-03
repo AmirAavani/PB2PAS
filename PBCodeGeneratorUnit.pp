@@ -25,7 +25,8 @@ type
 
 implementation
 uses
-  StreamUnit, StringUnit, ALoggerUnit, TemplateEngineUnit, PBOptionUnit, strutils;
+  StreamUnit, StringUnit, ALoggerUnit, TemplateEngineUnit, PBOptionUnit,
+  ProtoHelperUnit, strutils;
 
 const
   SingleQuote = #$27;
@@ -520,10 +521,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
 
         if Field.HasSimpleType(Self.Proto, RelatedProtos) then
         begin
-          FieldType :=  GetNonRepeatedType4FPC(Field.FieldType);
-
           Unitcode.ImplementationCode.Methods.Add(Format('  SaveRepeated%s(Stream, F%s, %d);',
-              [FieldType, CanName, Field.FieldNumber]));
+              [Canonicalize(Field.FieldType), CanName, Field.FieldNumber]));
           Exit;
         end;
 
@@ -686,8 +685,6 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
 
         if Field.HasSimpleType(Self.Proto, RelatedProtos) then
         begin
-          FieldType :=  GetNonRepeatedType4FPC(Field.FieldType);
-
           Unitcode.ImplementationCode.Methods.Add(Format(
           '%s  %d: ' + sLineBreak +
           '%s  begin' + sLineBreak +
@@ -698,7 +695,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
             [Indent, Field.FieldNumber,
             Indent,
             Indent, CanName, Field.FPCTypeName,
-            Indent, FieldType, CanName,
+            Indent, Canonicalize(Field.FieldType), CanName,
             Indent,
             Indent]));
           Exit;
@@ -729,7 +726,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         FieldType: AnsiString; Indent: AnsiString);
       begin
         Unitcode.ImplementationCode.Methods.Add(Format('%s%d: %s := Load%s(Stream);',
-          [Indent, Field.FieldNumber, CanName, Field.FieldType]));
+          [Indent, Field.FieldNumber, CanName, Canonicalize(Field.FieldType)]));
 
       end;
 
@@ -795,7 +792,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       Unitcode.ImplementationCode.Methods.Add('    end;');
       Unitcode.ImplementationCode.Methods.Add('  end;' + sLineBreak);
 
-      Unitcode.ImplementationCode.Methods.Add('  Result := StartPos + Len = Stream.Position;');
+      Unitcode.ImplementationCode.Methods.Add('  Result := StartPos + Len = Stream.Position;' + sLineBreak);
       Unitcode.ImplementationCode.Methods.Add('end;');
 
     end;
@@ -1096,6 +1093,10 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
     //Unitcode.InterfaceCode.TypeList.Add(Format('%s  function ToString: AnsiString;',
     //  [Indent]));
     Unitcode.InterfaceCode.TypeList.Add('');
+    Unitcode.InterfaceCode.TypeList.Add(Format('%spublic', [Indent]));
+    Unitcode.InterfaceCode.TypeList.Add(Format('%s  destructor Destroy; override;',
+      [Indent]));
+    Unitcode.InterfaceCode.TypeList.Add('');
     Unitcode.InterfaceCode.TypeList.Add(Format('%send;', [Indent]));
 
   end;
@@ -1119,24 +1120,56 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
     Unitcode.ImplementationCode.Methods.Add(Format('end;' + sLineBreak, []));
     }
 
+    Unitcode.ImplementationCode.Methods.Add('');
     Unitcode.ImplementationCode.Methods.Add(Format('function %s.LoadFromStream(Stream: TProtoStreamReader): Boolean;', [MapClassName]));
+    Unitcode.ImplementationCode.Methods.Add(Format('var', []));
+    Unitcode.ImplementationCode.Methods.Add(Format('  StartPos, Len, f, w: Integer;', []));
+    Unitcode.ImplementationCode.Methods.Add(Format('  Key: %s;', [Map.KeyPBType.FPCTypeName]));
+    Unitcode.ImplementationCode.Methods.Add(Format('  Value: %s;', [Map.ValuePBType.FPCTypeName]));
+    Unitcode.ImplementationCode.Methods.Add('');
     Unitcode.ImplementationCode.Methods.Add(Format('begin', []));
-    Unitcode.ImplementationCode.Methods.Add(Format('  Result := True;', []));
-    Unitcode.ImplementationCode.Methods.Add(Format('  // Not Implemented Yet!' + sLineBreak, [SingleQuote, SingleQuote]));
+    Unitcode.ImplementationCode.Methods.Add(Format('  Len := Stream.ReadVarUInt32;', []));
+    Unitcode.ImplementationCode.Methods.Add(Format('  StartPos := Stream.Position;', []));
+    if not Map.ValuePBType.IsSimpleType then
+      Unitcode.ImplementationCode.Methods.Add(Format('  Value := %s.Create;', [Map.ValuePBType.FPCTypeName]));
+
+    Unitcode.ImplementationCode.Methods.Add(sLineBreak + '  while Stream.Position < StartPos + Len do');
+    Unitcode.ImplementationCode.Methods.Add('  begin');
+    Unitcode.ImplementationCode.Methods.Add(Format('    Stream.ReadTag(f, w);' + sLineBreak, []));
+    Unitcode.ImplementationCode.Methods.Add(Format('    if f = 1 then', []));
+    Unitcode.ImplementationCode.Methods.Add(Format('      Key := Load%s(Stream)', [Map.KeyPBType.Name]));
+    Unitcode.ImplementationCode.Methods.Add(Format('    else if f = 2 then', []));
+    if Map.ValuePBType.IsSimpleType then
+      Unitcode.ImplementationCode.Methods.Add(Format('      Value := Load%s(Stream)',
+          [Map.ValuePBType.Name]))
+    else
+    begin
+      Unitcode.ImplementationCode.Methods.Add('      if not LoadMessage(Stream, Value) then');
+      Unitcode.ImplementationCode.Methods.Add('      begin');
+      Unitcode.ImplementationCode.Methods.Add('        Exit(False);');
+      Unitcode.ImplementationCode.Methods.Add('      end');
+
+    end;
+    Unitcode.ImplementationCode.Methods.Add(Format('    else', []));
+    Unitcode.ImplementationCode.Methods.Add(Format('      Exit(False);' + sLineBreak, []));
+    Unitcode.ImplementationCode.Methods.Add(Format('  end;' + sLineBreak, []));
+
+    Unitcode.ImplementationCode.Methods.Add(Format('  Result := StartPos + Len = Stream.Position;', []));
+    Unitcode.ImplementationCode.Methods.Add(Format('  Self[Key] := Value;' + sLineBreak, []));
     Unitcode.ImplementationCode.Methods.Add(Format('end;' + sLineBreak, []));
 
     Unitcode.ImplementationCode.Methods.Add(Format('procedure %s.SaveToStream(Stream: TProtoStreamWriter);', [MapClassName]));
     Unitcode.ImplementationCode.Methods.Add('var');
     Unitcode.ImplementationCode.Methods.Add('  i: Integer;');
-    Unitcode.ImplementationCode.Methods.Add('  aMsgSizeNode, TotalSizeNode: TLinkListNode;' + sLineBreak);
+    Unitcode.ImplementationCode.Methods.Add('  SizeNode: TLinkListNode;' + sLineBreak);
     Unitcode.ImplementationCode.Methods.Add('begin');
     Unitcode.ImplementationCode.Methods.Add('  if (Self = nil) or (Self.Count = 0) then');
     Unitcode.ImplementationCode.Methods.Add('    Exit;' + sLineBreak);
-    Unitcode.ImplementationCode.Methods.Add(Format('  Stream.WriteTag(%d, 2);', [Map.FieldNumber]));
-    Unitcode.ImplementationCode.Methods.Add('  TotalSizeNode := Stream.AddIntervalNode;');
     Unitcode.ImplementationCode.Methods.Add('  for i := 0 to Self.Count - 1 do');
     Unitcode.ImplementationCode.Methods.Add('  begin');
-    Unitcode.ImplementationCode.Methods.Add('    aMsgSizeNode := Stream.AddIntervalNode;');
+    Unitcode.ImplementationCode.Methods.Add(Format('    Stream.WriteTag(%d, WIRETYPE_LENGTH_DELIMITED);',
+       [Map.FieldNumber]));
+    Unitcode.ImplementationCode.Methods.Add(       '    SizeNode := Stream.AddIntervalNode;');
     Unitcode.ImplementationCode.Methods.Add(Format('    Save%s(Stream, Self.Keys[i], 1);',
        [Map.KeyPBType.FPCTypeName]));
     case Map.ValuePBType.Name of
@@ -1149,12 +1182,31 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
       Unitcode.ImplementationCode.Methods.Add('    SaveMessage(Stream, Self.Data[i], 2);');
     end;
     Unitcode.ImplementationCode.Methods.Add(
-      '    aMsgSizeNode.WriteLength(aMsgSizeNode.TotalSize);' + sLineBreak);
-
+      '    SizeNode.WriteLength(SizeNode.TotalSize);' + sLineBreak);
     Unitcode.ImplementationCode.Methods.Add('  end;' + sLineBreak);
-    Unitcode.ImplementationCode.Methods.Add(
-      '  TotalSizeNode.WriteLength(TotalSizeNode.TotalSize);' + sLineBreak);
     Unitcode.ImplementationCode.Methods.Add('end;' + sLineBreak);
+    Unitcode.ImplementationCode.Methods.Add('');
+
+    Unitcode.ImplementationCode.Methods.Add(Format('destructor %s.Destroy;', [MapClassName]));
+    if not Map.ValuePBType.IsSimpleType then
+    begin
+      Unitcode.ImplementationCode.Methods.Add('var');
+      Unitcode.ImplementationCode.Methods.Add('  i: Integer;');
+      Unitcode.ImplementationCode.Methods.Add('');
+    end;
+
+    Unitcode.ImplementationCode.Methods.Add('begin');
+    if not Map.ValuePBType.IsSimpleType then
+    begin
+      Unitcode.ImplementationCode.Methods.Add('  for i := 0 to Self.Count - 1 do');
+      Unitcode.ImplementationCode.Methods.Add('    %s(Self.Data[i]).Free;',
+       [Map.ValuePBType.FPCTypeName]);
+    end;
+    Unitcode.ImplementationCode.Methods.Add('  inherited;');
+    Unitcode.ImplementationCode.Methods.Add('');
+
+    Unitcode.ImplementationCode.Methods.Add('end;');
+
 
   end;
 
@@ -1237,7 +1289,7 @@ begin
   AllProtos := TProtos.Create;
   AllProtos.Count:= ProtoMap.Count - 1;
   for i := 1 to ProtoMap.Count - 1 do
-    AllProtos[i - 1] := ProtoMap.data[i];
+    AllProtos[i - 1] := ProtoMap.Data[i];
 
   for i := 0 to ProtoMap.Count - 1 do
   begin
