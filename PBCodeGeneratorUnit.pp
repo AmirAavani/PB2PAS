@@ -1130,7 +1130,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
     Unitcode.ImplementationCode.Methods.Add(Format('begin', []));
     Unitcode.ImplementationCode.Methods.Add(Format('  Len := Stream.ReadVarUInt32;', []));
     Unitcode.ImplementationCode.Methods.Add(Format('  StartPos := Stream.Position;', []));
-    if not Map.ValuePBType.IsSimpleType then
+    if not Map.ValuePBType.IsSimpleType(Proto, RelatedProtos) then
       Unitcode.ImplementationCode.Methods.Add(Format('  Value := %s.Create;', [Map.ValuePBType.FPCTypeName]));
 
     Unitcode.ImplementationCode.Methods.Add(sLineBreak + '  while Stream.Position < StartPos + Len do');
@@ -1139,7 +1139,10 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
     Unitcode.ImplementationCode.Methods.Add(Format('    if f = 1 then', []));
     Unitcode.ImplementationCode.Methods.Add(Format('      Key := Load%s(Stream)', [Map.KeyPBType.Name]));
     Unitcode.ImplementationCode.Methods.Add(Format('    else if f = 2 then', []));
-    if Map.ValuePBType.IsSimpleType then
+    if Map.ValuePBType.IsAnEnumType(Proto, RelatedProtos) then
+      Unitcode.ImplementationCode.Methods.Add(Format('      Value := %s(LoadInt32(Stream))',
+            [Map.ValuePBType.FPCTypeName]))
+    else if Map.ValuePBType.IsSimpleType(Proto, RelatedProtos) then
       Unitcode.ImplementationCode.Methods.Add(Format('      Value := Load%s(Stream)',
           [Map.ValuePBType.Name]))
     else
@@ -1172,15 +1175,15 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
     Unitcode.ImplementationCode.Methods.Add(       '    SizeNode := Stream.AddIntervalNode;');
     Unitcode.ImplementationCode.Methods.Add(Format('    Save%s(Stream, Self.Keys[i], 1);',
        [Map.KeyPBType.FPCTypeName]));
-    case Map.ValuePBType.Name of
-      'double', 'float', 'int32', 'int64', 'uint32', 'uint64', 'sint32',
-      'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64', 'bool',
-      'string', 'byte':
-          Unitcode.ImplementationCode.Methods.Add(Format('    Save%s(Stream, Self.Data[i], 2);',
-          [Map.ValuePBType.FPCTypeName]))
+
+    if Map.ValuePBType.IsAnEnumType(Proto, RelatedProtos) then
+      Unitcode.ImplementationCode.Methods.Add('    SaveInt32(Stream, Int32(Self.Data[i]), 2);')
+    else if Map.ValuePBType.IsSimpleType(Proto, RelatedProtos) then
+      Unitcode.ImplementationCode.Methods.Add(Format('    Save%s(Stream, Self.Data[i], 2);',
+    [Map.ValuePBType.FPCTypeName]))
     else
       Unitcode.ImplementationCode.Methods.Add('    SaveMessage(Stream, Self.Data[i], 2);');
-    end;
+
     Unitcode.ImplementationCode.Methods.Add(
       '    SizeNode.WriteLength(SizeNode.TotalSize);' + sLineBreak);
     Unitcode.ImplementationCode.Methods.Add('  end;' + sLineBreak);
@@ -1188,7 +1191,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
     Unitcode.ImplementationCode.Methods.Add('');
 
     Unitcode.ImplementationCode.Methods.Add(Format('destructor %s.Destroy;', [MapClassName]));
-    if not Map.ValuePBType.IsSimpleType then
+    if not Map.ValuePBType.IsSimpleType(Proto, RelatedProtos) then
     begin
       Unitcode.ImplementationCode.Methods.Add('var');
       Unitcode.ImplementationCode.Methods.Add('  i: Integer;');
@@ -1196,7 +1199,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
     end;
 
     Unitcode.ImplementationCode.Methods.Add('begin');
-    if not Map.ValuePBType.IsSimpleType then
+    if not Map.ValuePBType.IsSimpleType(Proto, RelatedProtos) then
     begin
       Unitcode.ImplementationCode.Methods.Add('  for i := 0 to Self.Count - 1 do');
       Unitcode.ImplementationCode.Methods.Add('    %s(Self.Data[i]).Free;',

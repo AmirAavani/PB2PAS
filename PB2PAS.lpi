@@ -41,7 +41,7 @@
         <IsPartOfProject Value="True"/>
       </Unit3>
       <Unit4>
-        <Filename Value="modules/PB2PAS/PBDefinitionUnit.pp"/>
+        <Filename Value="PBDefinitionUnit.pp"/>
         <IsPartOfProject Value="True"/>
       </Unit4>
       <Unit5>
@@ -49,7 +49,7 @@
         <IsPartOfProject Value="True"/>
       </Unit5>
       <Unit6>
-        <Filename Value="modules/PB2PAS/PBCodeGeneratorUnit.pp"/>
+        <Filename Value="PBCodeGeneratorUnit.pp"/>
         <IsPartOfProject Value="True"/>
       </Unit6>
       <Unit7>
@@ -85,7 +85,7 @@
         <IsPartOfProject Value="True"/>
       </Unit14>
       <Unit15>
-        <Filename Value="modules/PB2PAS/PBParserUnit.pp"/>
+        <Filename Value="PBParserUnit.pp"/>
         <IsPartOfProject Value="True"/>
       </Unit15>
     </Units>

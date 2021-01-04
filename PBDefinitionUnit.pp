@@ -56,7 +56,8 @@ type
     constructor Create(_Name: AnsiString; _IsRepeated: Boolean;
         _Options: TOptions; _Parent: TParent);
     function ToXML: AnsiString; virtual;
-    function IsSimpleType: Boolean;
+    function IsSimpleType(Proto: TProto; RelatedProtos: TProtos): Boolean;
+    function IsAnEnumType(Proto: TProto; RelatedProtos: TProtos): Boolean;
 
   end;
 
@@ -339,6 +340,7 @@ end;
 function TPBBaseType.GetFullName: AnsiString;
 begin
   Result := FName;
+
 end;
 
 function TPBBaseType.GetIsSimple: Boolean;
@@ -354,14 +356,31 @@ begin
 end;
 
 function TPBBaseType.GetName: AnsiString;
+var
+  StrList: TStringList;
+
 begin
-  if 0 < Pos('.', GetFullName) then
-  Result := Copy(;
+  StrList := Split(GetFullName, '.');
+
+  Result := StrList[StrList.Count - 1];
+
+  StrList.Free;
 
 end;
 
 function TPBBaseType.GetPackage: AnsiString;
+var
+  StrList: TStringList;
+
 begin
+  StrList := Split(GetFullName, '.');
+  StrList.Delete(StrList.Count - 1);
+  Result := '';
+
+  if StrList.Count <> 0 then
+    Result := JoinStrings(StrList, '.');
+
+  StrList.Free;
 
 end;
 
@@ -379,12 +398,17 @@ end;
 
 function TPBBaseType.ToXML: AnsiString;
 begin
-  Result := Format('<%s Name= "%s">%s',
-    [Self.ClassName, FName, FOptions.ToXML]);
+  Result := Format('<%s FullName = "%s" Package = "%s" Name = "%s">%s',
+    [Self.ClassName, FullName, PackageName, Name, FOptions.ToXML]);
 
 end;
 
-function TPBBaseType.IsSimpleType: Boolean;
+function TPBBaseType.IsSimpleType(Proto: TProto; RelatedProtos: TProtos
+  ): Boolean;
+var
+  p: TProto;
+  TmpParent: TParent;
+
 begin
   case Name of
     'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
@@ -392,17 +416,17 @@ begin
       , 'bool' , 'string', 'byte':
       Exit(True);
   end;
-  {
+
   if PackageName = '' then
   begin
     TmpParent := Parent;
     while (TmpParent.Message <> nil) or (TmpParent.Proto <> nil) do
     begin
       if (TmpParent.Message <> nil) and (TmpParent.Message.Enums <> nil) then
-        if TmpParent.Message.Enums.ByName[FieldType] <> nil then
+        if TmpParent.Message.Enums.ByName[Name] <> nil then
           Exit(True);
       if (TmpParent.Proto <> nil) and (TmpParent.Proto.Enums <> nil) then
-        if TmpParent.Proto.Enums.ByName[FieldType] <> nil then
+        if TmpParent.Proto.Enums.ByName[Name] <> nil then
           Exit(True);
 
       if TmpParent.Message <> nil then
@@ -412,7 +436,7 @@ begin
 
     end;
 
-    if (Proto.Enums <> nil) and (Proto.Enums.ByName[FieldType] <> nil) then
+    if (Proto.Enums <> nil) and (Proto.Enums.ByName[Name] <> nil) then
       Exit(True);
 
     Exit(False);
@@ -423,11 +447,61 @@ begin
     if p.PackageName <> PackageName then
       Continue;
     if p.Enums <> nil then
-      Exit(p.Enums.ByName[FieldType] <> nil);
+      Exit(p.Enums.ByName[Name] <> nil);
   end;
 
   raise Exception.Create('Someting went wrong!');
-   }
+
+end;
+
+function TPBBaseType.IsAnEnumType(Proto: TProto; RelatedProtos: TProtos
+  ): Boolean;
+var
+  ParentInfo: TParent;
+  P: TProto;
+
+begin
+  case Self.Name of
+    'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
+      , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
+      , 'bool' , 'string' , 'byte', 'bytes': Exit(False);
+  end;
+
+  if Self.PackageName = '' then
+  begin
+    ParentInfo := Self.Parent;
+    while (Parent.Message <> nil) or (Parent.Proto <> nil) do
+    begin
+      if (ParentInfo.Message <> nil) and (ParentInfo.Message.Enums <> nil) then
+        if ParentInfo.Message.Enums.ByName[Self.Name] <> nil then
+          Exit(True);
+      if (ParentInfo.Proto <> nil) and (ParentInfo.Proto.Enums <> nil) then
+        if ParentInfo.Proto.Enums.ByName[Self.Name] <> nil then
+          Exit(True);
+
+      if ParentInfo.Message <> nil then
+        ParentInfo := ParentInfo.Message.Parent
+      else
+        Break;
+
+    end;
+
+    if (Proto.Enums <> nil) and (Proto.Enums.ByName[Self.Name] <> nil) then
+      Exit(True);
+
+    Exit(False);
+  end;
+
+  for p in RelatedProtos do
+  begin
+    if p.PackageName <> Self.PackageName then
+      Continue;
+    if p.Enums <> nil then
+      Exit(p.Enums.ByName[Self.Name] <> nil);
+  end;
+
+  Result := False;
+
 end;
 
 { TEnum }
@@ -531,8 +605,9 @@ end;
 
 function TMap.GetFPCTypeName: AnsiString;
 begin
-  Result := Format('T%s2%sMap', [
-    Canonicalize(KeyPBType.Name), Canonicalize(ValuePBType.Name)]);
+  Result := Format('T%s%s2%s%sMap', [
+    Canonicalize(KeyPBType.PackageName), Canonicalize(KeyPBType.Name),
+    Canonicalize(ValuePBType.PackageName), Canonicalize(ValuePBType.Name)]);
 
 end;
 

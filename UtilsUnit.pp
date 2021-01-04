@@ -107,7 +107,6 @@ end;
 function IsAnEnumType(MessageField: TMessageField; FieldProto: TProto;
   RelatedProtos: TProtos): Boolean;
 var
-  PackageName: AnsiString;
   Parent: TParent;
   P: TProto;
 
@@ -118,8 +117,7 @@ begin
       , 'bool' , 'string' , 'byte', 'bytes': Exit(False);
   end;
 
-  PackageName := MessageField.PackageName;
-  if PackageName = '' then
+  if MessageField.PackageName = '' then
   begin
     Parent := MessageField.Parent;
     while (Parent.Message <> nil) or (Parent.Proto <> nil) do
@@ -146,7 +144,7 @@ begin
 
   for p in RelatedProtos do
   begin
-    if p.PackageName <> PackageName then
+    if p.PackageName <> MessageField.PackageName then
       Continue;
     if p.Enums <> nil then
       Exit(p.Enums.ByName[MessageField.FieldType] <> nil);
