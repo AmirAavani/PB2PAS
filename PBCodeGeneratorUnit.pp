@@ -318,7 +318,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       begin
         Unitcode.InterfaceCode.TypeList.Add(Format('%spublic type', [Indent]));
         UnitCode.InterfaceCode.TypeList.Add(
-         Format('%s  %s = class;', [Indent, Field.FPCTypeName]));
+         Format('%s  %s = class;', [Indent, Field.FieldType.FPCTypeName]));
       end;
     if aMessage.Messages.Count <> 0 then
       Unitcode.InterfaceCode.TypeList.Add('%spublic type', [Indent]);
@@ -348,9 +348,9 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
     for Field in aMessage.Fields do
       if Field.ClassType = TMap then
       begin
-        if 0 <= AllMaps.IndexOf(Field.FieldType) then
+        if 0 <= AllMaps.IndexOf(Field.FieldType.FPCTypeName) then
           Continue;
-        AllMaps.Add(Field.FieldType);
+        AllMaps.Add(Field.FieldType.FPCTypeName);
 
         Unitcode.InterfaceCode.TypeList.Add(Format('%spublic type', [Indent]));
         GenerateCodeForMap(Field as TMap, Unitcode, Indent + '  ');
@@ -374,7 +374,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       S := Format('%sconstructor Create(', [Indent]);
       for Field in aMessage.Fields do
         S += Format('a%s: %s; ', [Canonicalize(Field.Name),
-           Field.FPCTypeName]);
+           Field.FieldType.FPCTypeName]);
 
       S[Length(S) - 1] := ')';
       S[Length(S)] := ';';
@@ -411,7 +411,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         CreateDeclaration := 'Create(';
         for Field in aMessage.Fields do
           CreateDeclaration += Format('a%s: %s; ', [Canonicalize(Field.Name),
-            Field.FPCTypeName]);
+            Field.FieldType.FPCTypeName]);
         CreateDeclaration[Length(CreateDeclaration) - 1] := ')';
         CreateDeclaration[Length(CreateDeclaration)] := ';';
         Unitcode.ImplementationCode.Methods.Add(Format('constructor %s.%s',
@@ -441,7 +441,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       for Field in aMessage.Fields do
       begin
         CanName := Canonicalize(Field.Name);
-        if not Field.HasSimpleType(Self.Proto, RelatedProtos) or Field.IsRepeated then
+        if not Field.HasSimpleType(Self.Proto, RelatedProtos) or
+          Field.FieldType.IsRepeated then
           Unitcode.ImplementationCode.Methods.Add(Format('  F%s.Free;', [CanName]));
       end;
       Unitcode.ImplementationCode.Methods.Add('');
@@ -492,9 +493,10 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
 
       begin
         CanName := Field.CanonicalizeFullName;
-        FieldType :=  JoinStrings([GetUnitName(Field, Proto, RelatedProtos), Field.FPCTypeName], '.');
+        FieldType :=  JoinStrings([GetUnitName(Field, Proto, RelatedProtos),
+          Field.FieldType.FPCTypeName], '.');
 
-        if not Field.IsRepeated then
+        if not Field.FieldType.IsRepeated then
         begin
           if IsAnEnumType(Field, Proto, RelatedProtos) then
             GenerateForEnum(Field, CanName, FieldType, Indent)
@@ -522,7 +524,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         if Field.HasSimpleType(Self.Proto, RelatedProtos) then
         begin
           Unitcode.ImplementationCode.Methods.Add(Format('  SaveRepeated%s(Stream, F%s, %d);',
-              [Canonicalize(Field.FieldType), CanName, Field.FieldNumber]));
+              [Canonicalize(Field.FieldType.Name), CanName, Field.FieldNumber]));
           Exit;
         end;
 
@@ -533,7 +535,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         end;
 
         Unitcode.ImplementationCode.Methods.Add(Format('  specialize SaveRepeatedMessage<%s>(Stream, F%s, %d);',
-                         [GetNonRepeatedType4FPC(Field.FieldType), CanName, Field.FieldNumber]));
+                         [GetNonRepeatedType4FPC(Field.FieldType.Name), CanName, Field.FieldNumber]));
       end;
 
       procedure GenerateForOneOf(OneOf: TOneOf; CanName, FieldType: AnsiString;
@@ -561,7 +563,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         FieldType: AnsiString; Indent: AnsiString);
       begin
         Unitcode.ImplementationCode.Methods.Add(Format('%sSave%s(Stream, %s, %d);',
-          [Indent, Canonicalize(Field.FieldType), CanName, Field.FieldNumber]));
+          [Indent, Canonicalize(Field.FieldType.Name), CanName, Field.FieldNumber]));
 
       end;
 
@@ -601,10 +603,12 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       VarParts := TStringList.Create;
       for Field in aMessage.Fields do
       begin
-        if IsAnEnumType(Field, Self.Proto, RelatedProtos) and Field.IsRepeated then
+        if IsAnEnumType(Field, Self.Proto, RelatedProtos) and
+          Field.FieldType.IsRepeated then
         begin
           VarParts.Add(Format('  _%s: T%s;',  [Canonicalize(Field.Name),
-            JoinStrings([GetUnitName(Field, Proto, RelatedProtos), GetNonRepeatedType4FPC(Field.FieldType)], '.')]));
+            JoinStrings([GetUnitName(Field, Proto, RelatedProtos),
+              GetNonRepeatedType4FPC(Field.FieldType.Name)], '.')]));
         end
       end;
 
@@ -647,9 +651,10 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
 
       begin
         CanName := Field.CanonicalizeFullName;
-        FieldType :=  JoinStrings([GetUnitName(Field, Proto, RelatedProtos), Field.FPCTypeName], '.');
+        FieldType :=  JoinStrings([GetUnitName(Field, Proto, RelatedProtos),
+          Field.FieldType.FPCTypeName], '.');
 
-        if not Field.IsRepeated then
+        if not Field.FieldType.IsRepeated then
         begin
           if IsAnEnumType(Field, Proto, RelatedProtos) then
             GenerateForEnum(Field, CanName, FieldType, Indent + '  ')
@@ -676,7 +681,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
           '%s  end' + sLineBreak,
             [Indent, Field.FieldNumber,
             Indent,
-            Indent, CanName, Field.FPCTypeName,
+            Indent, CanName, Field.FieldType.FPCTypeName,
             Indent, CanName,
             Indent,
             Indent]));
@@ -694,8 +699,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
           '%s  end;' + sLineBreak,
             [Indent, Field.FieldNumber,
             Indent,
-            Indent, CanName, Field.FPCTypeName,
-            Indent, Canonicalize(Field.FieldType), CanName,
+            Indent, CanName, Field.FieldType.FPCTypeName,
+            Indent, Canonicalize(Field.FieldType.Name), CanName,
             Indent,
             Indent]));
           Exit;
@@ -708,7 +713,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         end;
 
         Unitcode.ImplementationCode.Methods.Add(Format('  %s%d: specialize LoadRepeatedMessage<%s>(Stream, F%s);',
-                         [Indent, Field.FieldNumber, GetNonRepeatedType4FPC(Field.FieldType), CanName]));
+                         [Indent, Field.FieldNumber,
+                         GetNonRepeatedType4FPC(Field.FieldType.Name), CanName]));
       end;
 
       procedure GenerateForOneOf(OneOf: TOneOf; CanName, FieldType: AnsiString;
@@ -726,7 +732,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         FieldType: AnsiString; Indent: AnsiString);
       begin
         Unitcode.ImplementationCode.Methods.Add(Format('%s%d: %s := Load%s(Stream);',
-          [Indent, Field.FieldNumber, CanName, Canonicalize(Field.FieldType)]));
+          [Indent, Field.FieldNumber, CanName, Canonicalize(Field.FieldType.Name)]));
 
       end;
 
@@ -823,16 +829,16 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
     const Template: AnsiString): AnsiString;
   begin
     Result := Template;
-    Result := StringReplace(Result, '[[Field.Type]]', aField.FieldType, [rfReplaceAll]);
-    Result := StringReplace(Result, '[[Field.FPCType]]', aField.FPCTypeName, [rfReplaceAll]);
+    Result := StringReplace(Result, '[[Field.Type]]', aField.FieldType.Name, [rfReplaceAll]);
+    Result := StringReplace(Result, '[[Field.FPCType]]', aField.FieldType.FPCTypeName, [rfReplaceAll]);
     Result := StringReplace(Result, '[[Field.UnitNameAndFPCType]]',
-      JoinStrings([GetUnitName(aField, Proto, RelatedProtos), aField.FPCTypeName], '.'), [rfReplaceAll]);
-    if aField.PackageName <> '' then
+      JoinStrings([GetUnitName(aField, Proto, RelatedProtos), aField.FieldType.FPCTypeName], '.'), [rfReplaceAll]);
+    if aField.FieldType.PackageName <> '' then
     begin
       Result := StringReplace(Result, '[[Field.UnitNameWithDot]]',
         GetUnitName(aField, Proto, RelatedProtos) + '.', [rfReplaceAll]);
         Result := StringReplace(Result, '[[Field.PackageNameWithDot]]',
-          aField.PackageName + '.', [rfReplaceAll])
+          aField.FieldType.PackageName + '.', [rfReplaceAll])
     end
     else
     begin
@@ -840,16 +846,19 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
       Result := StringReplace(Result, '[[Field.PackageNameWithDot]]', '', [rfReplaceAll])
     end;
 
-    Result := StringReplace(Result, '[[Field.Name]]', aField.Name, [rfReplaceAll]);
-    Result := StringReplace(Result, '[[Field.Number]]', IntToStr(aField.FieldNumber), [rfReplaceAll]);
-    Result := StringReplace(Result, '[[CanName]]', Canonicalize(aField.Name), [rfReplaceAll]);
-    Result := StringReplace(Result, '[[FormatString]]', FormatString(aField.FieldType), [rfReplaceAll]);
-    Result := StringReplace(Result, '[[ClassName]]', MessageClassName, [rfReplaceAll]);
-    if aField.IsRepeated then
-    begin
-
-      Result := StringReplace(Result, '[[Field.InnerFPCType]]', GetNonRepeatedType4FPC(aField.FieldType), [rfReplaceAll]);
-    end;
+    Result := StringReplace(Result, '[[Field.Name]]', aField.Name,
+      [rfReplaceAll]);
+    Result := StringReplace(Result, '[[Field.Number]]',
+      IntToStr(aField.FieldNumber), [rfReplaceAll]);
+    Result := StringReplace(Result, '[[CanName]]', Canonicalize(aField.Name),
+      [rfReplaceAll]);
+    Result := StringReplace(Result, '[[FormatString]]',
+      FormatString(aField.FieldType.Name), [rfReplaceAll]);
+    Result := StringReplace(Result, '[[ClassName]]', MessageClassName,
+      [rfReplaceAll]);
+    if aField.FieldType.IsRepeated then
+      Result := StringReplace(Result, '[[Field.InnerFPCType]]',
+        GetNonRepeatedType4FPC(aField.FieldType.Name), [rfReplaceAll]);
 
   end;
 
@@ -861,11 +870,11 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
 
   procedure GenerateDeclaration;
   begin
-    if not aField.IsRepeated and aField.HasSimpleType(Self.Proto, RelatedProtos) then
+    if not aField.FieldType.IsRepeated and aField.HasSimpleType(Self.Proto, RelatedProtos) then
       UnitCode.InterfaceCode.TypeList.Add(ApplyPattern(MessageClassName, DeclareNonRepeatedSimpleFieldTemplate))
-    else if not aField.IsRepeated and not aField.HasSimpleType(Self.Proto, RelatedProtos) then
+    else if not aField.FieldType.IsRepeated and not aField.HasSimpleType(Self.Proto, RelatedProtos) then
       UnitCode.InterfaceCode.TypeList.Add(ApplyPattern(MessageClassName, DeclareNonRepeatedNonSimpleFieldTemplate))
-    else if aField.IsRepeated and not aField.HasSimpleType(Self.Proto, RelatedProtos) then
+    else if aField.FieldType.IsRepeated and not aField.HasSimpleType(Self.Proto, RelatedProtos) then
       UnitCode.InterfaceCode.TypeList.Add(ApplyPattern(MessageClassName, DeclareRepeatedNonSimpleFieldTemplate))
     else
       UnitCode.InterfaceCode.TypeList.Add(ApplyPattern(MessageClassName, DeclareRepeatedSimpleFieldTemplate));
@@ -873,7 +882,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
 
   procedure GenerateImplementation;
   begin
-    if not aField.IsRepeated then
+    if not aField.FieldType.IsRepeated then
     else if not aField.HasSimpleType(Self.Proto, RelatedProtos) then
       UnitCode.ImplementationCode.Methods.Add(ApplyPattern(MessageClassName, ImplementRepeatedNonSimpleFieldTemplate))
     else
@@ -896,23 +905,23 @@ procedure TPBCodeGeneratorV1.GenerateCodeForOneOf(const OneOf: TOneOf;
 
   begin
     Unitcode.InterfaceCode.TypeList.Add(Format('%s%s = Class(TBaseOneOf)', [Indent,
-      OneOf.FPCTypeName]));
+      OneOf.FieldType.FPCTypeName]));
     Unitcode.InterfaceCode.TypeList.Add(Format('%sprivate', [Indent]));
 
     for Field in OneOf.Fields do
     begin
       Unitcode.InterfaceCode.TypeList.Add(Format('%sfunction Get%s: %s;',
-      [Indent + '  ', Canonicalize(Field.Name), Field.FPCTypeName]));
+      [Indent + '  ', Canonicalize(Field.Name), Field.FieldType.FPCTypeName]));
       Unitcode.InterfaceCode.TypeList.Add(Format('%sprocedure Set%s(_%s: %s);',
       [Indent + '  ', Canonicalize(Field.Name), Canonicalize(Field.Name),
-        Field.FPCTypeName]));
+        Field.FieldType.FPCTypeName]));
     end;
     Unitcode.InterfaceCode.TypeList.Add('');
 
     Unitcode.InterfaceCode.TypeList.Add('%spublic', [Indent]);
     for Field in OneOf.Fields do
       Unitcode.InterfaceCode.TypeList.Add(Format('%sproperty %s: %s read Get%s write Set%s;',
-        [Indent + '  ', Canonicalize(Field.Name), Field.FPCTypeName,
+        [Indent + '  ', Canonicalize(Field.Name), Field.FieldType.FPCTypeName,
         Canonicalize(Field.Name), Canonicalize(Field.Name)]));
     Unitcode.InterfaceCode.TypeList.Add('');
     Unitcode.InterfaceCode.TypeList.Add(Format('%s  constructor Create;', [Indent]));
@@ -952,34 +961,37 @@ procedure TPBCodeGeneratorV1.GenerateCodeForOneOf(const OneOf: TOneOf;
       Field := OneOf.Fields[i];
 
       Unitcode.ImplementationCode.Methods.Add(Format('function %s.Get%s: %s;',
-      [OneOfClassName, Canonicalize(Field.Name), Field.FPCTypeName]));
+      [OneOfClassName, Canonicalize(Field.Name), Field.FieldType.FPCTypeName]));
       Unitcode.ImplementationCode.Methods.Add(Format('begin', []));
       if Field.HasSimpleType(Proto, RelatedProtos) then
         Unitcode.ImplementationCode.Methods.Add(
           Format('  Result := %s(P%s(Self.GetPointerByIndex(%d))^)',
-            [Field.FPCTypeName, Field.FPCTypeName, i]))
+            [Field.FieldType.FPCTypeName, Field.FieldType.FPCTypeName, i]))
       else
         Unitcode.ImplementationCode.Methods.Add(
           Format('  Result := %s(Self.GetPointerByIndex(%d))',
-            [Field.FPCTypeName, i]));
+            [Field.FieldType.FPCTypeName, i]));
       Unitcode.ImplementationCode.Methods.Add(Format('', []));
       Unitcode.ImplementationCode.Methods.Add(Format('end;', []));
       Unitcode.ImplementationCode.Methods.Add(Format('', []));
 
       Unitcode.ImplementationCode.Methods.Add(Format('procedure %s.Set%s(_%s: %s);',
       [OneOfClassName, Canonicalize(Field.Name), Canonicalize(Field.Name),
-        Field.FPCTypeName]));
+        Field.FieldType.FPCTypeName]));
       if Field.HasSimpleType(Proto, RelatedProtos) then
       begin
         Unitcode.ImplementationCode.Methods.Add(Format('var', []));
-        Unitcode.ImplementationCode.Methods.Add(Format('  PData: P%s;', [Field.FPCTypeName]));
+        Unitcode.ImplementationCode.Methods.Add(Format('  PData: P%s;',
+          [Field.FieldType.FPCTypeName]));
         Unitcode.ImplementationCode.Methods.Add(Format('', []));
       end;
       Unitcode.ImplementationCode.Methods.Add(Format('begin', []));
       if Field.HasSimpleType(Proto, RelatedProtos) then
       begin
-        Unitcode.ImplementationCode.Methods.Add('  PData := new(P%s);', [Field.FPCTypeName]);
-        Unitcode.ImplementationCode.Methods.Add('  PData^ := _%s;', [Canonicalize(Field.Name)]);
+        Unitcode.ImplementationCode.Methods.Add('  PData := new(P%s);',
+          [Field.FieldType.FPCTypeName]);
+        Unitcode.ImplementationCode.Methods.Add('  PData^ := _%s;',
+          [Canonicalize(Field.Name)]);
         Unitcode.ImplementationCode.Methods.Add(
           Format('  Self.SetPointerByIndex(%d, PData);', [i]));
       end
@@ -1032,8 +1044,9 @@ TODO(Amir): Implement this constrctor for OneOfs.
     for Field in OneOf.Fields do
     begin
       if Field.HasSimpleType(Proto, RelatedProtos) then
-        Unitcode.ImplementationCode.Methods.Add(Format('  MaybeDispose(P%s(GetPointerByIndex(%d)));',
-        [Field.FPCTypeName, Field.FieldNumber]))
+        Unitcode.ImplementationCode.Methods.Add(
+          Format('  MaybeDispose(P%s(GetPointerByIndex(%d)));',
+            [Field.FieldType.FPCTypeName, Field.FieldNumber]))
       else
         Unitcode.ImplementationCode.Methods.Add(Format('    Get%s.Free;',
         [Canonicalize(Field.Name)]));
@@ -1083,7 +1096,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
   procedure GenerateDeclaration;
   begin
     Unitcode.InterfaceCode.TypeList.Add(Format('%s%s = class(specialize TFPGMap<%s, %s>)',
-      [Indent, Map.FPCTypeName, Map.KeyPBType.FPCTypeName,
+      [Indent, Map.FieldType.FPCTypeName, Map.KeyPBType.FPCTypeName,
       Map.ValuePBType.FPCTypeName]));
     Unitcode.InterfaceCode.TypeList.Add(Format('%sprivate', [Indent]));
     Unitcode.InterfaceCode.TypeList.Add(Format('%s  function LoadFromStream(Stream: TProtoStreamReader): Boolean;',

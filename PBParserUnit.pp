@@ -119,7 +119,7 @@ type
     function ParseIdent: TIdentifier;
     function ParseFieldNumber: Integer;
     function ParseFullIdent: TFullIdentifier;
-    function ParseType: TType;
+    function ParseType: AnsiString;
 
     function CollectUntil(EndTokenKind: TTokenKind): TTokenArray;
 
@@ -522,7 +522,7 @@ begin
 
 end;
 
-function TProtoParser.ParseType: TType;
+function TProtoParser.ParseType: AnsiString;
  // type = "double" | "float" | "int32" | "int64" | "uint32" | "uint64"
  //     | "sint32" | "sint64" | "fixed32" | "fixed64" | "sfixed32" | "sfixed64"
  //     | "bool" | "string" | "bytes" | messageType | enumType
@@ -1058,7 +1058,7 @@ end;
 function TProto3Parser.ParseOneOfField(ParentOneOf: TOneOf): TOneOfField;
 // oneofField = type fieldName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
 var
-  OneOfFieldType: TType;
+  OneOfFieldType: AnsiString;
   Name: AnsiString;
   FieldNumber: Integer;
   Options: TOptions;
@@ -1078,10 +1078,9 @@ end;
 
 function TProto3Parser.ParseMap(ParentMessage: TMessage): TMap;
 var
-  KeyType, ValueType: TType;
+  KeyType, ValueType: AnsiString;
   Name: AnsiString;
   FieldNumber: Integer;
-  Options: TOptions;
 // mapField = "map" "<" keyType "," type ">" mapName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
 // keyType = "int32" | "int64" | "uint32" | "uint64" | "sint32" | "sint64" |
 //          "fixed32" | "fixed64" | "sfixed32" | "sfixed64" | "bool" | "string"
@@ -1096,10 +1095,9 @@ begin
   Name := ParseIdent;
   Tokenizer.Expect(ttkEqualSign);
   FieldNumber := ParseFieldNumber;
-  Options := MaybeParseOptions;
   Tokenizer.Expect(ttkSemiColon);
 
-  Result := TMap.Create(Name, FieldNumber, KeyType, ValueType, Options, ParentMessage);
+  Result := TMap.Create(Name, FieldNumber, KeyType, ValueType, ParentMessage);
 
 end;
 
@@ -1107,7 +1105,7 @@ function TProto3Parser.ParseMessageField(ParentMessage: TMessage
   ): TMessageField;
 var
   Name: AnsiString;
-  FieldType: TType;
+  FieldType: AnsiString;
   IsRepeated: Boolean;
   FieldNumber: Integer;
   Options: TOptions;

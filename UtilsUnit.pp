@@ -92,7 +92,7 @@ var
   Proto: TProto;
 
 begin
-  PackageName := MessageField.PackageName;
+  PackageName := MessageField.FieldType.PackageName;
 
   if PackageName = '' then
     Exit('');
@@ -106,76 +106,16 @@ end;
 
 function IsAnEnumType(MessageField: TMessageField; FieldProto: TProto;
   RelatedProtos: TProtos): Boolean;
-var
-  Parent: TParent;
-  P: TProto;
-
 begin
-  case MessageField.FieldType of
-    'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
-      , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
-      , 'bool' , 'string' , 'byte', 'bytes': Exit(False);
-  end;
+  Exit(MessageField.FieldType.IsAnEnumType(FieldProto, RelatedProtos));
 
-  if MessageField.PackageName = '' then
-  begin
-    Parent := MessageField.Parent;
-    while (Parent.Message <> nil) or (Parent.Proto <> nil) do
-    begin
-      if (Parent.Message <> nil) and (Parent.Message.Enums <> nil) then
-        if Parent.Message.Enums.ByName[MessageField.FieldType] <> nil then
-          Exit(True);
-      if (Parent.Proto <> nil) and (Parent.Proto.Enums <> nil) then
-        if Parent.Proto.Enums.ByName[MessageField.FieldType] <> nil then
-          Exit(True);
-
-      if Parent.Message <> nil then
-        Parent := Parent.Message.Parent
-      else
-        Break;
-
-    end;
-
-    if (FieldProto.Enums <> nil) and (FieldProto.Enums.ByName[MessageField.FieldType] <> nil) then
-      Exit(True);
-
-    Exit(False);
-  end;
-
-  for p in RelatedProtos do
-  begin
-    if p.PackageName <> MessageField.PackageName then
-      Continue;
-    if p.Enums <> nil then
-      Exit(p.Enums.ByName[MessageField.FieldType] <> nil);
-  end;
-
-  Result := False;
 end;
 
 function IsOneOfType(MessageField: TMessageField; FieldProto: TProto;
   RelatedProtos: TProtos): Boolean;
-var
-  PackageName: AnsiString;
-  Parent: TParent;
-  P: TProto;
-
 begin
-  case MessageField.FieldType of
-    'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
-      , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
-      , 'bool' , 'string' , 'byte', 'bytes': Exit(False);
-  end;
-
-  PackageName := MessageField.PackageName;
-  if PackageName = '' then
-  begin
-    if MessageField is TOneOf then
-      Exit;
-  end;
-
-  Result := False;
-
+  if MessageField is TOneOf then
+    Exit;
 end;
 
 function GetMessageClassName(aMessage: TMessage): AnsiString;
@@ -201,7 +141,7 @@ var
 
 begin
   Result := Format('T%s', [Canonicalize(anOneOf.Name)]);
-  Parent := anOneOf.Parent;
+  Parent := anOneOf.FieldType.Parent;
 
   while Parent.Message <> nil do
   begin
@@ -217,8 +157,8 @@ var
   Parent: TParent;
 
 begin
-  Result := aMap.FPCTypeName;
-  Parent := aMap.Parent;
+  Result := aMap.FieldType.FPCTypeName;
+  Parent := aMap.FieldType.Parent;
 
   while Parent.Message <> nil do
   begin

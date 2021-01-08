@@ -18,7 +18,7 @@ type
   TProtos = specialize TList<TProto>;
 
   TOneOf = class;
-  TType = AnsiString;
+  // TType = AnsiString;
 
   TParent = record
     OneOf: TOneOf;
@@ -70,34 +70,26 @@ type
   protected
     FParent: TParent;
     FFieldNumber: Integer;
-    FIsRepeated: Boolean;
-    FFieldType: TType;
-    // FFieldPBType: TPBBaseType;
+    // FFieldType: TType;
+    FFieldPBType: TPBBaseType;
     FName: AnsiString;
     FOptions: TOptions;
 
     function GetFieldNumber: Integer; virtual;
-    function GetFieldType: TType; virtual;
-    function GetIsRepeated: Boolean; virtual;
+    function GetFieldType: TPBBaseType; virtual;
     function GetCanonicalizeFullName: AnsiString; virtual;
     function GetName: AnsiString; virtual;
     function GetOptions: TOptions;  virtual;
-    // Returns the translation of FieldType to FPC.
-    function GetFPCTypeName: AnsiString;  virtual;
-    function GetPackageName: AnsiString; virtual;
   public
     property Parent: TParent read FParent;
-    property IsRepeated: Boolean read GetIsRepeated;
-    property FieldType: TType read GetFieldType;
-    property FPCTypeName: AnsiString read GetFPCTypeName;
-    property PackageName: AnsiString read GetPackageName;
+    property FieldType: TPBBaseType read GetFieldType;
     property Name: AnsiString read GetName;
     property CanonicalizeName: AnsiString read GetCanonicalizeName;
     property CanonicalizeFullName: AnsiString read GetCanonicalizeFullName;
     property FieldNumber: Integer read GetFieldNumber;
     property Options: TOptions read GetOptions;
 
-    constructor Create(_Name: AnsiString; _FieldType: TType; _IsRepeated: Boolean;
+    constructor Create(_Name: AnsiString; _FieldType: AnsiString; _IsRepeated: Boolean;
       _FieldNumber: Integer; _Options: TOptions; _Parent: TParent);
     destructor Destroy; override;
 
@@ -158,7 +150,7 @@ type
     function GetCanonicalizeFullName: AnsiString; override;
 
   public
-    constructor Create(_Name: AnsiString; _OneOfFieldType: TType;
+    constructor Create(_Name: AnsiString; _OneOfFieldType: AnsiString;
          _IsRepeated: Boolean; _FieldNumber: Integer; _Options: TOptions;
          _Parent: TOneOf);
     function ToXML: AnsiString; override;
@@ -190,24 +182,19 @@ type
 
   TMap = class(TMessageField)
   private
-    FKeyType: TType;
-    FValueType: TType;
     FKeyPBType: TPBBaseType;
     FValuePBType: TPBBaseType;
 
   protected
-    function GetFieldType: TType; override;
-    // Returns the translation of FieldType to FPC.
-    function GetFPCTypeName: AnsiString; override;
+    function GetFieldType: TPBBaseType; override;
 
   public
-    property KeyType: TType read FKeyType;
-    property ValueType: TType read FValueType;
     property KeyPBType: TPBBaseType read FKeyPBType;
     property ValuePBType: TPBBaseType read FValuePBType;
 
-    constructor Create(_Name: AnsiString; _FieldNumber: Integer; _KeyType, _ValueType: TType;
-           _Options: TOptions; _Parent: TMessage);
+    constructor Create(_Name: AnsiString; _FieldNumber: Integer;
+          _KeyType, _ValueType: AnsiString;
+          _Parent: TMessage);
     destructor Destroy; override;
 
     function ToXML: AnsiString; override;
@@ -597,30 +584,21 @@ end;
 
 { TMap }
 
-function TMap.GetFieldType: TType;
+function TMap.GetFieldType: TPBBaseType;
 begin
-  Result := Format('map<%s, %s>', [FKeyType, FValueType]);
-
-end;
-
-function TMap.GetFPCTypeName: AnsiString;
-begin
-  Result := Format('T%s%s2%s%sMap', [
-    Canonicalize(KeyPBType.PackageName), Canonicalize(KeyPBType.Name),
-    Canonicalize(ValuePBType.PackageName), Canonicalize(ValuePBType.Name)]);
+  raise Exception.Create('NIY');
+//  Result := Format('map<%s, %s>', [FKeyType, FValueType]);
 
 end;
 
 constructor TMap.Create(_Name: AnsiString; _FieldNumber: Integer; _KeyType,
-  _ValueType: TType; _Options: TOptions; _Parent: TMessage);
+  _ValueType: AnsiString; _Parent: TMessage);
 begin
-   inherited Create(_Name, '', false, _FieldNumber, _Options,
+   inherited Create(_Name, '', false, _FieldNumber, nil,
      CreateParent(nil, _Parent, nil));
 
-   FKeyType := _KeyType;
-   FValueType := _ValueType;
-   FKeyPBType := TPBBaseType.Create(FKeyType, False, nil, CreateParent(nil, _Parent, nil));
-   FValuePBType := TPBBaseType.Create(FValueType, False, nil, CreateParent(nil, _Parent, nil));
+   FKeyPBType := TPBBaseType.Create(_KeyType, False, nil, CreateParent(nil, _Parent, nil));
+   FValuePBType := TPBBaseType.Create(_ValueType, False, nil, CreateParent(nil, _Parent, nil));
 
 end;
 
@@ -635,10 +613,9 @@ begin
   Result := Format('<TMap Name = "%s" FieldNumber = "%d">' + sLineBreak +
                      '<Key Type = "%s" PPType = "%s"/>' + sLineBreak +
                      '<Value Type = "%s" PPType = "%s"/>' + sLineBreak +
-                     '%s' + sLineBreak +
                     '</TMap>',
-   [GetName, GetFieldNumber, KeyType, KeyPBType.FPCTypeName,
-     ValueType, ValuePBType.FPCTypeName, GetOptions.ToXML]);
+   [GetName, GetFieldNumber, KeyPBType.Name, KeyPBType.FPCTypeName,
+     ValuePBType.Name, ValuePBType.FPCTypeName]);
 end;
 
 function TMap.HasSimpleType(Proto: TProto; RelatedProtos: TProtos): Boolean;
@@ -710,12 +687,12 @@ var
 
 begin
   FieldName := Canonicalize(Name);
-  ParentName := Canonicalize(Parent.OneOf.Name);
+  ParentName := Canonicalize(FieldType.Parent.OneOf.Name);
 
   Result := Format('%s.%s', [ParentName, FieldName]);
 end;
 
-constructor TOneOfField.Create(_Name: AnsiString; _OneOfFieldType: TType;
+constructor TOneOfField.Create(_Name: AnsiString; _OneOfFieldType: AnsiString;
   _IsRepeated: Boolean; _FieldNumber: Integer; _Options: TOptions;
   _Parent: TOneOf);
 begin
@@ -726,9 +703,10 @@ end;
 
 function TOneOfField.ToXML: AnsiString;
 begin
-  Result:= Format('<TOneOfField Name = "%s" Type ="%s" FieldNumber = "%d"> %s </TOneOfField>',
+  Result := Format('<TOneOfField Name = "%s" Type ="%s" FPCType="%s" FieldNumber = "%d"> %s </TOneOfField>',
    [Name,
-    FieldType,
+    FieldType.Name,
+    FieldType.FPCTypeName,
     FieldNumber,
     Options.ToXML]);
 
@@ -807,27 +785,9 @@ begin
   Result := FFieldNumber;
 end;
 
-function TMessageField.GetFieldType: TType;
-var
-  Parts: TStringList;
-
+function TMessageField.GetFieldType: TPBBaseType;
 begin
-  Result := FFieldType;
-  if Pos('.', Result) = 0 then
-    Exit;
-
-  Parts := TStringList.Create;
-  Parts.Delimiter:= '.';
-  Parts.DelimitedText := Result;
-
-  Result := Parts.Strings[Parts.Count - 1];
-  Parts.Free;
-
-end;
-
-function TMessageField.GetIsRepeated: Boolean;
-begin
-  Result := FIsRepeated;
+  Result := FFieldPBType;
 
 end;
 
@@ -848,50 +808,16 @@ begin
 
 end;
 
-function TMessageField.GetFPCTypeName: AnsiString;
-var
-  ThisFieldType: AnsiString;
-
-begin
-  ThisFieldType := FieldType;
-
-  if IsRepeated then
-    Result := 'T' + Canonicalize(FName)
-  else
-    Result := GetNonRepeatedType4FPC(ThisFieldType);
-
-end;
-
-function TMessageField.GetPackageName: AnsiString;
-var
-  Parts: TStringList;
-
-begin
-  if Pos('.', FFieldType) = 0 then
-    Exit('');
-
-  Parts := TStringList.Create;
-  Parts.Delimiter:= '.';
-  Parts.DelimitedText := FFieldType;
-  Parts.Delete(Parts.Count - 1);
-
-  Result := JoinStrings(Parts, '.');
-
-  Parts.Free;
-end;
-
-constructor TMessageField.Create(_Name: AnsiString; _FieldType: TType;
+constructor TMessageField.Create(_Name: AnsiString; _FieldType: AnsiString;
   _IsRepeated: Boolean; _FieldNumber: Integer; _Options: TOptions;
   _Parent: TParent);
 begin
   inherited Create;
 
   FName := _Name;
-  FFieldType := _FieldType;
-  FIsRepeated := _IsRepeated;
+  FFieldPBType :=  TPBBaseType.Create(_FieldType, _IsRepeated, _Options, _Parent);
   FFieldNumber := _FieldNumber;
   FOptions := _Options;
-  FParent := _Parent;
 
 end;
 
@@ -904,10 +830,11 @@ end;
 
 function TMessageField.ToXML: AnsiString;
 begin
-  Result:= Format('<MessageField Name = "%s" IsRepeated = "%s" Type = "%s" FieldNumber = "%d"> %s</MessageField>'#10,
+  Result:= Format('<MessageField Name = "%s" IsRepeated = "%s" Type = "%s" FPCType = "%s" FieldNumber = "%d"> %s</MessageField>'#10,
   [GetName,
-    IfThen(IsRepeated, 'True', 'False'),
-    GetFieldType,
+    IfThen(FieldType. IsRepeated, 'True', 'False'),
+    GetFieldType.Name,
+    GetFieldType.FPCTypeName,
     GetFieldNumber,
     GetOptions.ToXML
   ]);
@@ -916,52 +843,9 @@ end;
 
 function TMessageField.HasSimpleType(Proto: TProto; RelatedProtos: TProtos
   ): Boolean;
-var
-  TmpParent: TParent;
-  P: TProto;
-
 begin
-  case FieldType of
-    'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
-      , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
-      , 'bool' , 'string', 'byte':
-      Exit(True);
-  end;
+  Exit(FieldType.IsSimpleType(Proto, RelatedProtos));
 
-  if PackageName = '' then
-  begin
-    TmpParent := Parent;
-    while (TmpParent.Message <> nil) or (TmpParent.Proto <> nil) do
-    begin
-      if (TmpParent.Message <> nil) and (TmpParent.Message.Enums <> nil) then
-        if TmpParent.Message.Enums.ByName[FieldType] <> nil then
-          Exit(True);
-      if (TmpParent.Proto <> nil) and (TmpParent.Proto.Enums <> nil) then
-        if TmpParent.Proto.Enums.ByName[FieldType] <> nil then
-          Exit(True);
-
-      if TmpParent.Message <> nil then
-        TmpParent := TmpParent.Message.Parent
-      else
-        Break;
-
-    end;
-
-    if (Proto.Enums <> nil) and (Proto.Enums.ByName[FieldType] <> nil) then
-      Exit(True);
-
-    Exit(False);
-  end;
-
-  for p in RelatedProtos do
-  begin
-    if p.PackageName <> PackageName then
-      Continue;
-    if p.Enums <> nil then
-      Exit(p.Enums.ByName[FieldType] <> nil);
-  end;
-
-  raise Exception.Create('Someting went wrong!');
 end;
 
 { TProto }
