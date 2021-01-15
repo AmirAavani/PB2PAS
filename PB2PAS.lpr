@@ -4,12 +4,12 @@ program PB2PAS;
 uses
   cthreads, Classes, sysutils, ParameterManagerUnit, PBParserUnit, StringUnit,
   UtilsUnit, PBDefinitionUnit, PBCodeGeneratorUnit,
-  ProtoHelperUnit, ALoggerUnit, fgl, PBOptionUnit, ObjectListUnit;
+  ProtoHelperUnit, ALoggerUnit, PBOptionUnit, NamedObjectListUnit;
 
 
 var
   ProtoMap: TProtoMap;
-  i: Integer;
+  it: TProtoMap.TPairEnumerator;
 
 begin
   WriteLn('<A>');
@@ -17,8 +17,10 @@ begin
   ProtoMap := TBaseProtoParser.ParseAll(
     GetRunTimeParameterManager.ValueByName['--InputFile'].AsAnsiString);
 
-  for i := 0 to ProtoMap.Count - 1 do
-    WriteLn(ProtoMap.Data[i].ToXML);
+  it := ProtoMap.GetEnumerator;
+  while it.MoveNext do
+    WriteLn(it.Current.Value.ToXML);
+  it.Free;
 
   TPBBaseCodeGenerator.GenerateCode(ProtoMap);
 

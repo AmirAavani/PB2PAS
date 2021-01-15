@@ -6,7 +6,7 @@ unit PBParserUnit;
 interface
 
 uses
-  PBDefinitionUnit, Classes, SysUtils, fgl, StreamUnit, gvector, ProtoHelperUnit;
+  PBDefinitionUnit, Classes, SysUtils, StreamUnit, gvector, ProtoHelperUnit;
 
 type
 
@@ -774,6 +774,7 @@ begin
   Result := Parser.ParseProto;
 
   Parser.Free;
+
 end;
 
 class function TBaseProtoParser.ParseAll(_InputFilename: AnsiString): TProtoMap;
@@ -785,10 +786,10 @@ class function TBaseProtoParser.ParseAll(_InputFilename: AnsiString): TProtoMap;
 
   begin
     Proto := TBaseProtoParser.Parse(ProtoFile);
-    ProtoMap[ProtoFile] := Proto;
+    ProtoMap.Add(ProtoFile, Proto);
 
     for Import in Proto.Imports do
-      if ProtoMap.IndexOf(Import) = -1 then
+      if ProtoMap.Find(Import) = nil then
         RecParse(Import, ProtoMap);
   end;
 
@@ -1336,8 +1337,6 @@ begin
       raise Exception.Create(Format('Invalid token: %s', [Token.TokenString]));
     Token := Tokenizer.GetNextToken;
   end;
-
-
 
 end;
 
