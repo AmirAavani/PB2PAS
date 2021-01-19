@@ -13,8 +13,8 @@ const
   '' + sLineBreak +
   '  public' + sLineBreak +
   '    property [[CanName]][Index: Integer]: [[Field.UnitNameWithDot]][[Field.InnerFPCType]] read Get[[CanName]];' + sLineBreak +
-  '    property Const[[CanName]]: T[[CanName]] read Get[[CanName]];' + sLineBreak +
-  '    property Mutable[[CanName]]: T[[CanName]] read GetOrCreate[[CanName]];' + sLineBreak;
+  '    property Const[[CanName]]: T[[CanName]] read F[[CanName]];' + sLineBreak +
+  '    property Mutable[[CanName]]: T[[CanName]] read GetOrCreate[[CanName]] write F[[CanName]];' + sLineBreak;
 
   ImplementRepeatedNonSimpleFieldTemplate : AnsiString =
    sLineBreak +

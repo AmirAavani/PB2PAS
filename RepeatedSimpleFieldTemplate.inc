@@ -8,12 +8,11 @@ const
   '' + sLineBreak +
   '    // Getter Functions' + sLineBreak +
   '    function Get[[CanName]](Index: Integer): [[Field.UnitNameWithDot]][[Field.InnerFPCType]];' + sLineBreak +
-  '    function GetAll[[CanName]]: T[[CanName]];' + sLineBreak +
   '    function GetOrCreate[[CanName]]: T[[CanName]];' + sLineBreak + sLineBreak +
   '  public' + sLineBreak +
   '    property [[CanName]][Index: Integer]: [[Field.UnitNameWithDot]][[Field.InnerFPCType]] read Get[[CanName]];' + sLineBreak +
-  '    property Const[[CanName]]: T[[CanName]] read GetAll[[CanName]];' + sLineBreak +
-  '    property Mutable[[CanName]]: T[[CanName]] read GetOrCreate[[CanName]];' + sLineBreak;
+  '    property Const[[CanName]]: T[[CanName]] read F[[CanName]];' + sLineBreak +
+  '    property Mutable[[CanName]]: T[[CanName]] read GetOrCreate[[CanName]] write F[[CanName]];' + sLineBreak;
 
  ImplementRepeatedSimpleFieldTemplate : AnsiString =
   sLineBreak +
@@ -22,12 +21,6 @@ const
    'function [[ClassName]].Get[[CanName]](Index: Integer): [[Field.UnitNameWithDot]][[Field.InnerFPCType]];' + sLineBreak +
    'begin' + sLineBreak +
    '  Result := F[[CanName]][Index];' + sLineBreak + sLineBreak +
-   'end;' + sLineBreak + sLineBreak +
-   'function [[ClassName]].GetAll[[CanName]]: T[[CanName]];' + sLineBreak +
-   'begin' + sLineBreak +
-   '  if Self = nil then' + sLineBreak +
-   '    Exit(nil);' + sLineBreak +
-   '  Result := F[[CanName]];'+ sLineBreak + sLineBreak +
    'end;' + sLineBreak + sLineBreak +
    'function [[ClassName]].GetOrCreate[[CanName]]: T[[CanName]];' + sLineBreak +
    '' + sLineBreak +

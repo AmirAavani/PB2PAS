@@ -812,8 +812,10 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
 
   procedure GenerateImplementation;
   begin
-    if not aField.FieldType.IsRepeated then
-    else if not aField.HasSimpleType(Self.Proto, RelatedProtos) then
+    if not aField.FieldType.IsRepeated and aField.HasSimpleType(Self.Proto, RelatedProtos) then
+    else if not aField.FieldType.IsRepeated and not aField.HasSimpleType(Self.Proto, RelatedProtos) then
+      UnitCode.ImplementationCode.Methods.Add(ApplyPattern(MessageClassName, ImplementNonRepeatedNonSimpleFieldTemplate))
+    else if aField.FieldType.IsRepeated and not aField.HasSimpleType(Self.Proto, RelatedProtos) then
       UnitCode.ImplementationCode.Methods.Add(ApplyPattern(MessageClassName, ImplementRepeatedNonSimpleFieldTemplate))
     else
       UnitCode.ImplementationCode.Methods.Add(ApplyPattern(MessageClassName, ImplementRepeatedSimpleFieldTemplate));
@@ -988,42 +990,52 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
     Unitcode.ImplementationCode.Methods.Add('');
     Unitcode.ImplementationCode.Methods.Add(Format('function %s.LoadFromStream(Stream: TProtoStreamReader): Boolean;', [MapClassName]));
     Unitcode.ImplementationCode.Methods.Add(Format('var', []));
-    Unitcode.ImplementationCode.Methods.Add(Format('  StartPos, Len, f, w: Integer;', []));
+    Unitcode.ImplementationCode.Methods.Add(Format('  StartPos, Len, f, w, fs: Integer;', []));
     Unitcode.ImplementationCode.Methods.Add(Format('  Key: %s;', [Map.MapFieldPBType.KeyPBType.FPCTypeName]));
     Unitcode.ImplementationCode.Methods.Add(Format('  Value: %s;', [Map.MapFieldPBType.ValuePBType.FPCTypeName]));
     Unitcode.ImplementationCode.Methods.Add('');
     Unitcode.ImplementationCode.Methods.Add(Format('begin', []));
     Unitcode.ImplementationCode.Methods.Add(Format('  Len := Stream.ReadVarUInt32;', []));
     Unitcode.ImplementationCode.Methods.Add(Format('  StartPos := Stream.Position;', []));
-    if not Map.MapFieldPBType.ValuePBType.IsSimpleType(Proto, RelatedProtos) then
-      Unitcode.ImplementationCode.Methods.Add(Format('  Value := %s.Create;', [Map.MapFieldPBType.ValuePBType.FPCTypeName]));
+    Unitcode.ImplementationCode.Methods.Add(Format('  fs := 0;', []));
 
     Unitcode.ImplementationCode.Methods.Add(sLineBreak + '  while Stream.Position < StartPos + Len do');
     Unitcode.ImplementationCode.Methods.Add('  begin');
     Unitcode.ImplementationCode.Methods.Add(Format('    Stream.ReadTag(f, w);' + sLineBreak, []));
     Unitcode.ImplementationCode.Methods.Add(Format('    if f = 1 then', []));
+    Unitcode.ImplementationCode.Methods.Add(Format('    begin', []));
     Unitcode.ImplementationCode.Methods.Add(Format('      Key := Load%s(Stream)', [Map.MapFieldPBType.KeyPBType.Name]));
+    Unitcode.ImplementationCode.Methods.Add(Format('    end', []));
     Unitcode.ImplementationCode.Methods.Add(Format('    else if f = 2 then', []));
+    Unitcode.ImplementationCode.Methods.Add(Format('    begin', []));
     if Map.MapFieldPBType.ValuePBType.IsAnEnumType(Proto, RelatedProtos) then
-      Unitcode.ImplementationCode.Methods.Add(Format('      Value := %s(LoadInt32(Stream))',
+      Unitcode.ImplementationCode.Methods.Add(Format('      Value := %s(LoadInt32(Stream))' + sLineBreak,
             [Map.MapFieldPBType.ValuePBType.FPCTypeName]))
     else if Map.MapFieldPBType.ValuePBType.IsSimpleType(Proto, RelatedProtos) then
       Unitcode.ImplementationCode.Methods.Add(Format('      Value := Load%s(Stream)',
           [Map.MapFieldPBType.ValuePBType.Name]))
     else
     begin
+      Unitcode.ImplementationCode.Methods.Add(Format(
+                                              '      Value := %s.Create;' + sLineBreak, [Map.MapFieldPBType.ValuePBType.FPCTypeName]));
       Unitcode.ImplementationCode.Methods.Add('      if not LoadMessage(Stream, Value) then');
       Unitcode.ImplementationCode.Methods.Add('      begin');
       Unitcode.ImplementationCode.Methods.Add('        Exit(False);');
-      Unitcode.ImplementationCode.Methods.Add('      end');
+      Unitcode.ImplementationCode.Methods.Add('      end' + sLineBreak);
 
     end;
+    Unitcode.ImplementationCode.Methods.Add(Format('    end', []));
     Unitcode.ImplementationCode.Methods.Add(Format('    else', []));
     Unitcode.ImplementationCode.Methods.Add(Format('      Exit(False);' + sLineBreak, []));
+    Unitcode.ImplementationCode.Methods.Add(Format('    fs := fs xor f;', []));
+    Unitcode.ImplementationCode.Methods.Add(Format('    if fs = 3 then', []));
+    Unitcode.ImplementationCode.Methods.Add(Format('    begin', []));
+    Unitcode.ImplementationCode.Methods.Add(Format('      Self.Add(Key, Value);', []));
+    Unitcode.ImplementationCode.Methods.Add(Format('      fs := 0;' + sLineBreak, []));
+    Unitcode.ImplementationCode.Methods.Add(Format('    end;' + sLineBreak, []));
     Unitcode.ImplementationCode.Methods.Add(Format('  end;' + sLineBreak, []));
 
     Unitcode.ImplementationCode.Methods.Add(Format('  Result := StartPos + Len = Stream.Position;', []));
-    Unitcode.ImplementationCode.Methods.Add(Format('  Self[Key] := Value;' + sLineBreak, []));
     Unitcode.ImplementationCode.Methods.Add(Format('end;' + sLineBreak, []));
 
     Unitcode.ImplementationCode.Methods.Add(Format('procedure %s.SaveToStream(Stream: TProtoStreamWriter);', [MapClassName]));
