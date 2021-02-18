@@ -12,11 +12,7 @@ function FormatString(const FieldType: AnsiString): AnsiString;
 function GetUnitName(const Filename: AnsiString): AnsiString;
 function GetNonRepeatedType4FPC(TypeName: AnsiString): AnsiString;
 function GetUnitName(MessageField: TMessageField; FieldProto: TProto; RelatedProtos: TProtos): AnsiString;
-function IsAnEnumType(MessageField: TMessageField; FieldProto: TProto; RelatedProtos: TProtos): Boolean;
 function IsOneOfType(MessageField: TMessageField; FieldProto: TProto; RelatedProtos: TProtos): Boolean;
-function GetMessageClassName(aMessage: TMessage): AnsiString;
-function GetOneOfClassName(anOneOf: TOneOf): AnsiString;
-function GetMapClassName(aMap: TMap): AnsiString;
 function MaybeRemoveQuotations(aValue: AnsiString): AnsiString;
 
 type
@@ -104,69 +100,11 @@ begin
   Result := '';
 end;
 
-function IsAnEnumType(MessageField: TMessageField; FieldProto: TProto;
-  RelatedProtos: TProtos): Boolean;
-begin
-  Exit(MessageField.FieldType.IsAnEnumType(FieldProto, RelatedProtos));
-
-end;
-
 function IsOneOfType(MessageField: TMessageField; FieldProto: TProto;
   RelatedProtos: TProtos): Boolean;
 begin
   if MessageField is TOneOf then
     Exit;
-end;
-
-function GetMessageClassName(aMessage: TMessage): AnsiString;
-var
-  Parent: TParent;
-
-begin
-  Result := Format('T%s', [Canonicalize(aMessage.Name)]);
-  Parent := aMessage.Parent;
-
-  while Parent.Message <> nil do
-  begin
-    Result := Format('T%s.%s', [Canonicalize(Parent.Message.Name), Result]);
-    Parent := Parent.Message.Parent;
-
-  end;
-
-end;
-
-function GetOneOfClassName(anOneOf: TOneOf): AnsiString;
-var
-  Parent: TParent;
-
-begin
-  Result := Format('T%s', [Canonicalize(anOneOf.Name)]);
-  Parent := anOneOf.FieldType.Parent;
-
-  while Parent.Message <> nil do
-  begin
-    Result := Format('T%s.%s', [Canonicalize(Parent.Message.Name), Result]);
-    Parent := Parent.Message.Parent;
-
-  end;
-
-end;
-
-function GetMapClassName(aMap: TMap): AnsiString;
-var
-  Parent: TParent;
-
-begin
-  Result := aMap.FieldType.FPCTypeName;
-  Parent := aMap.FieldType.Parent;
-
-  while Parent.Message <> nil do
-  begin
-    Result := Format('T%s.%s', [Canonicalize(Parent.Message.Name), Result]);
-    Parent := Parent.Message.Parent;
-
-  end;
-
 end;
 
 function GetTypeSize(TypeName: AnsiString): Integer;

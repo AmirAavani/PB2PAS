@@ -1,0 +1,2 @@
+// AnEnum.Name
+// AnEnum.FPCType =

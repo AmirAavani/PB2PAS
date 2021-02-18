@@ -39,9 +39,7 @@ type
 
   protected
     function GetNonRepeatedType4FPC: AnsiString; virtual;
-    function GetFPCTypeName: AnsiString; virtual;
     function GetFullName: AnsiString; virtual;
-    function GetIsSimple: Boolean; virtual;
     function GetName: AnsiString; virtual;
     function GetPackage: AnsiString; virtual;
 
@@ -52,15 +50,12 @@ type
     property FullName: AnsiString read GetFullName;
     property PackageName: AnsiString read GetPackage;
     property Options: TOptions read FOptions;
-    property FPCTypeName: AnsiString read GetFPCTypeName;
     property NonRepeatedType4FPC: AnsiString read GetNonRepeatedType4FPC;
     property IsRepeated: Boolean read FIsRepeated;
 
     constructor Create(_Name: AnsiString; _IsRepeated: Boolean;
         _Options: TOptions; _Parent: TParent);
     function ToXML: AnsiString; virtual;
-    function IsAnEnumType(Proto: TProto; RelatedProtos: TProtos): Boolean; virtual;
-    function IsSimpleType(Proto: TProto; RelatedProtos: TProtos): Boolean; virtual;
 
   end;
 
@@ -70,9 +65,7 @@ type
   private
     FKeyPBType, FValuePBType: TPBBaseType;
   protected
-    function GetFPCTypeName: AnsiString; override;
     function GetFullName: AnsiString; override;
-    function GetIsSimple: Boolean; override;
     function GetPackage: AnsiString; override;
 
   public
@@ -82,21 +75,47 @@ type
     constructor Create(_KeyType, _ValueType: TPBBaseType; _Parent: TParent);
     destructor Destroy; override;
 
-    function IsAnEnumType(Proto: TProto; RelatedProtos: TProtos): Boolean; override;
-    function IsSimpleType(Proto: TProto; RelatedProtos: TProtos): Boolean; override;
+  end;
+
+  TPBBaseTypes = specialize TObjectCollection<TPBBaseType>;
+
+  { TPBTypeWithFields }
+
+  TPBTypeWithFields = class(TPBBaseType)
+  protected
+    FFields: TPBBaseTypes;
+
+  public
+    property Fields: TPBBaseTypes read FFields;
+
+    constructor Create(aName: AnsiString; _IsRepeated: Boolean; _Options: TOptions;  _Parent: TParent);
+    destructor Destroy; override;
+  end;
+
+  { TOneOfPBType }
+
+  TOneOfPBType = class(TPBTypeWithFields)
+  public
+    property Fields: TPBBaseTypes read FFields;
+
+    constructor Create(aName: AnsiString; _Parent: TParent);
+
+  end;
+
+  { TMessagePBType }
+
+  TMessagePBType = class(TPBTypeWithFields)
+  public
+    constructor Create(aName: AnsiString; _Parent: TParent);
+
 
   end;
 
   { TMessageField }
 
   TMessageField = class(TObject)
-  private
-    function GetCanonicalizeName: AnsiString;
-
   protected
-    FParent: TParent;
     FFieldNumber: Integer;
-    // FFieldType: TType;
     FFieldPBType: TPBBaseType;
     FName: AnsiString;
     FOptions: TOptions;
@@ -106,12 +125,15 @@ type
     function GetCanonicalizeFullName: AnsiString; virtual;
     function GetName: AnsiString; virtual;
     function GetOptions: TOptions;  virtual;
+    function GetCanonicalizeFullNameForWriting: AnsiString; virtual;
+    function GetCanonicalizeName: AnsiString; virtual;
+
   public
-    property Parent: TParent read FParent;
     property FieldType: TPBBaseType read GetFieldType;
     property Name: AnsiString read GetName;
     property CanonicalizeName: AnsiString read GetCanonicalizeName;
-    property CanonicalizeFullName: AnsiString read GetCanonicalizeFullName;
+    property _CanonicalizeFullName: AnsiString read GetCanonicalizeFullName;
+    property CanonicalizeFullNameForWriting: AnsiString read GetCanonicalizeFullNameForWriting;
     property FieldNumber: Integer read GetFieldNumber;
     property Options: TOptions read GetOptions;
 
@@ -120,8 +142,6 @@ type
     destructor Destroy; override;
 
     function ToXML: AnsiString; virtual;
-
-    function HasSimpleType(Proto: TProto; RelatedProtos: TProtos): Boolean; virtual;
   end;
 
   TMessageFields = specialize TNamedObjectList<TMessageField>;
@@ -174,6 +194,8 @@ type
   TOneOfField = class(TMessageField)
   protected
     function GetCanonicalizeFullName: AnsiString; override;
+    function GetCanonicalizeFullNameForWriting: AnsiString; override;
+    function GetCanonicalizeName: AnsiString; override;
 
   public
     constructor Create(_Name: AnsiString; _OneOfFieldType: AnsiString;
@@ -184,22 +206,29 @@ type
   end;
 
   TOneOfFields = specialize TObjectList<TOneOfField>;
+
   { TOneOf }
 
   TOneOf = class(TMessageField)
   private
     OneOfFields: TOneOfFields;
     function GetFieldNumbers: AnsiString;
+    function GetOneOfFieldPBType: TOneOfPBType;
+    function GetFieldType: TPBBaseType; override;
+
+  protected
+    function GetCanonicalizeFullNameForWriting: AnsiString; override;
 
   public
+    property OneOfFieldPBType: TOneOfPBType read GetOneOfFieldPBType;
     property Fields: TOneOfFields read OneOfFields;
     property FieldNumbers: AnsiString read GetFieldNumbers;
+
     constructor Create(_Name: AnsiString; _Fields: TOneOfFields;
           ParentMessage: TMessage);
     destructor Destroy; override;
 
     function ToXML: AnsiString;override;
-    function HasSimpleType(Proto: TProto; RelatedProtos: TProtos): Boolean; override;
   end;
 
   TOneOfs = specialize TObjectList<TOneOf>;
@@ -208,7 +237,7 @@ type
 
   TMap = class(TMessageField)
   private
-    function GetMapFieldPBType: TMapPBType;
+  function GetMapFieldPBType: TMapPBType;
 
   public
     property MapFieldPBType: TMapPBType read GetMapFieldPBType;
@@ -219,7 +248,6 @@ type
     destructor Destroy; override;
 
     function ToXML: AnsiString; override;
-    function HasSimpleType(Proto: TProto; RelatedProtos: TProtos): Boolean; override;
   end;
 
 
@@ -229,6 +257,7 @@ type
 
   TMessage = class(TObject)
   private
+    MessagePBType: TMessagePBType;
     FFields: TMessageFields;
     FMessages: specialize TNamedObjectList<TMessage>;
     FOptions: TOptions;
@@ -236,18 +265,14 @@ type
     FName: AnsiString;
     FParent: TParent;
 
-    // MessageClassName: AnsiString;
-
-    function GetFPCTypeName: AnsiString;
     procedure PrepareForCodeGeneration(AllClassesNames, AllEnumsNames: TStringList);
   public
-    // property Parent:
+    property MessageType: TMessagePBType read MessagePBType;
     property Name: AnsiString read FName;
     property Fields: TMessageFields read FFields;
     property Messages: specialize TNamedObjectList<TMessage> read FMessages;
     property Options: TOptions read FOptions;
     property Enums: TEnums read FEnums;
-    property FPCTypeName: AnsiString read GetFPCTypeName;
     property Parent: TParent read FParent;
 
     constructor Create(_Name: AnsiString;
@@ -334,23 +359,44 @@ begin
 
 end;
 
-{ TMapPBType }
+{ TMessagePBType }
 
-function TMapPBType.GetFPCTypeName: AnsiString;
+constructor TMessagePBType.Create(aName: AnsiString; _Parent: TParent);
 begin
-  Result := Format('T%sTo%sMap', [Canonicalize(KeyPBType.Name), Canonicalize(ValuePBType.Name)]);
+  inherited Create(aName, False, nil, _Parent);
 
 end;
+
+{ TOneOfPBType }
+
+constructor TOneOfPBType.Create(aName: AnsiString; _Parent: TParent);
+begin
+  inherited Create(aName, False, nil, _Parent);
+
+end;
+
+{ TPBTypeWithFields }
+
+constructor TPBTypeWithFields.Create(aName: AnsiString; _IsRepeated: Boolean;
+  _Options: TOptions; _Parent: TParent);
+begin
+  inherited Create(aName, _IsRepeated, _Options, _Parent);
+
+  FFields := TPBBaseTypes.Create;
+end;
+
+destructor TPBTypeWithFields.Destroy;
+begin
+  FFields.Free;
+
+  inherited Destroy;
+end;
+
+{ TMapPBType }
 
 function TMapPBType.GetFullName: AnsiString;
 begin
   Result := Format('T%sTo%sMap', [Canonicalize(KeyPBType.Name), Canonicalize(ValuePBType.Name)]);
-
-end;
-
-function TMapPBType.GetIsSimple: Boolean;
-begin
-  Result := False;
 
 end;
 
@@ -378,19 +424,6 @@ begin
   inherited Destroy;
 end;
 
-function TMapPBType.IsAnEnumType(Proto: TProto; RelatedProtos: TProtos
-  ): Boolean;
-begin
-  Result := False;
-end;
-
-function TMapPBType.IsSimpleType(Proto: TProto; RelatedProtos: TProtos
-  ): Boolean;
-begin
-  Result := False;
-
-end;
-
 { TPBBaseType }
 
 function TPBBaseType.GetNonRepeatedType4FPC: AnsiString;
@@ -402,30 +435,9 @@ begin
 
 end;
 
-function TPBBaseType.GetFPCTypeName: AnsiString;
-begin
-  if IsRepeated then
-    Result := 'T' + Canonicalize(Name)
-  else
-    Result := UtilsUnit.GetNonRepeatedType4FPC(Name);
-
-end;
-
 function TPBBaseType.GetFullName: AnsiString;
 begin
   Result := FName;
-
-end;
-
-function TPBBaseType.GetIsSimple: Boolean;
-begin
-  Result := False;
-  case Name of
-    'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
-      , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
-      , 'bool' , 'string', 'byte':
-      Result := True;
-  end;
 
 end;
 
@@ -474,107 +486,6 @@ function TPBBaseType.ToXML: AnsiString;
 begin
   Result := Format('<%s FullName = "%s" Package = "%s" Name = "%s">%s',
     [Self.ClassName, FullName, PackageName, Name, FOptions.ToXML]);
-
-end;
-
-function TPBBaseType.IsSimpleType(Proto: TProto; RelatedProtos: TProtos
-  ): Boolean;
-var
-  p: TProto;
-  TmpParent: TParent;
-
-begin
-  case Name of
-    'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
-      , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
-      , 'bool' , 'string', 'byte':
-      Exit(True);
-  end;
-
-  if PackageName = '' then
-  begin
-    TmpParent := Parent;
-    while (TmpParent.Message <> nil) or (TmpParent.Proto <> nil) do
-    begin
-      if (TmpParent.Message <> nil) and (TmpParent.Message.Enums <> nil) then
-        if TmpParent.Message.Enums.ByName[Name] <> nil then
-          Exit(True);
-      if (TmpParent.Proto <> nil) and (TmpParent.Proto.Enums <> nil) then
-        if TmpParent.Proto.Enums.ByName[Name] <> nil then
-          Exit(True);
-
-      if TmpParent.Message <> nil then
-        TmpParent := TmpParent.Message.Parent
-      else
-        Break;
-
-    end;
-
-    if (Proto.Enums <> nil) and (Proto.Enums.ByName[Name] <> nil) then
-      Exit(True);
-
-    Exit(False);
-  end;
-
-  for p in RelatedProtos do
-  begin
-    if p.PackageName <> PackageName then
-      Continue;
-    if p.Enums <> nil then
-      Exit(p.Enums.ByName[Name] <> nil);
-  end;
-
-  raise Exception.Create('Someting went wrong!');
-
-end;
-
-function TPBBaseType.IsAnEnumType(Proto: TProto; RelatedProtos: TProtos
-  ): Boolean;
-var
-  ParentInfo: TParent;
-  P: TProto;
-
-begin
-  case Self.Name of
-    'double' , 'float' , 'int32' , 'int64' , 'uint32' , 'uint64'
-      , 'sint32' , 'sint64' , 'fixed32' , 'fixed64' , 'sfixed32' , 'sfixed64'
-      , 'bool' , 'string' , 'byte', 'bytes': Exit(False);
-  end;
-
-  if Self.PackageName = '' then
-  begin
-    ParentInfo := Self.Parent;
-    while (Parent.Message <> nil) or (Parent.Proto <> nil) do
-    begin
-      if (ParentInfo.Message <> nil) and (ParentInfo.Message.Enums <> nil) then
-        if ParentInfo.Message.Enums.ByName[Self.Name] <> nil then
-          Exit(True);
-      if (ParentInfo.Proto <> nil) and (ParentInfo.Proto.Enums <> nil) then
-        if ParentInfo.Proto.Enums.ByName[Self.Name] <> nil then
-          Exit(True);
-
-      if ParentInfo.Message <> nil then
-        ParentInfo := ParentInfo.Message.Parent
-      else
-        Break;
-
-    end;
-
-    if (Proto.Enums <> nil) and (Proto.Enums.ByName[Self.Name] <> nil) then
-      Exit(True);
-
-    Exit(False);
-  end;
-
-  for p in RelatedProtos do
-  begin
-    if p.PackageName <> Self.PackageName then
-      Continue;
-    if p.Enums <> nil then
-      Exit(p.Enums.ByName[Self.Name] <> nil);
-  end;
-
-  Result := False;
 
 end;
 
@@ -687,6 +598,7 @@ begin
      nil,
      CreateParent(nil, _Parent, nil));
 
+   FFieldPBType.Free;
    FFieldPBType := TMapPBType.Create(
      TPBBaseType.Create(_KeyType, False, nil, CreateParent(nil, _Parent, nil)),
      TPBBaseType.Create(_ValueType, False, nil, CreateParent(nil, _Parent, nil)),
@@ -696,8 +608,6 @@ end;
 
 destructor TMap.Destroy;
 begin
-  FFieldPBType.Free;
-
   inherited Destroy;
 
 end;
@@ -708,11 +618,6 @@ begin
                      '<FieldType>%s</FieldType>' + sLineBreak +
                     '</TMap>',
    [GetName, GetFieldNumber, FieldType.ToXML]);
-end;
-
-function TMap.HasSimpleType(Proto: TProto; RelatedProtos: TProtos): Boolean;
-begin
-  Result := False;
 end;
 
 { TOneOf }
@@ -733,6 +638,35 @@ begin
 
 end;
 
+function TOneOf.GetOneOfFieldPBType: TOneOfPBType;
+var
+  aField: TOneOfField;
+
+begin
+  if (FFieldPBType as TOneOfPBType).FFields = nil then
+  begin
+    for aField in Self.Fields do
+      (FFieldPBType as TOneOfPBType).Fields.Add(aField.FieldType);
+
+  end;
+
+  Result := (FFieldPBType as TOneOfPBType);
+
+end;
+
+function TOneOf.GetFieldType: TPBBaseType;
+begin
+  Result := Self.OneOfFieldPBType;
+
+end;
+
+function TOneOf.GetCanonicalizeFullNameForWriting: AnsiString;
+begin
+  Result:= Format('Mutable%s', [GetCanonicalizeFullName]);
+
+end;
+
+
 constructor TOneOf.Create(_Name: AnsiString; _Fields: TOneOfFields;
   ParentMessage: TMessage);
 begin
@@ -740,6 +674,8 @@ begin
     CreateParent(nil, ParentMessage, nil));
 
   OneOfFields := _Fields;
+  FFieldPBType.Free;
+  FFieldPBType := TOneOfPBType.Create(_Name, CreateParent(nil, ParentMessage, nil));
 
 end;
 
@@ -765,11 +701,6 @@ begin
 
 end;
 
-function TOneOf.HasSimpleType(Proto: TProto; RelatedProtos: TProtos): Boolean;
-begin
-  Result := False;
-end;
-
 { TOneOfField }
 
 function TOneOfField.GetCanonicalizeFullName: AnsiString;
@@ -782,6 +713,21 @@ begin
   ParentName := Canonicalize(FieldType.Parent.OneOf.Name);
 
   Result := Format('%s.%s', [ParentName, FieldName]);
+
+end;
+
+function TOneOfField.GetCanonicalizeFullNameForWriting: AnsiString;
+begin
+  Result := Format('%s.%s', [FieldType.Parent.OneOf.GetCanonicalizeFullNameForWriting,
+    Canonicalize(GetName)]);
+
+end;
+
+function TOneOfField.GetCanonicalizeName: AnsiString;
+begin
+  Result := Format('%s.%s', [FieldType.Parent.OneOf.GetCanonicalizeFullName,
+    Canonicalize(GetName)]);
+
 end;
 
 constructor TOneOfField.Create(_Name: AnsiString; _OneOfFieldType: AnsiString;
@@ -795,10 +741,9 @@ end;
 
 function TOneOfField.ToXML: AnsiString;
 begin
-  Result := Format('<TOneOfField Name = "%s" Type ="%s" FPCType="%s" FieldNumber = "%d"> %s </TOneOfField>',
+  Result := Format('<TOneOfField Name = "%s" Type ="%s" FieldNumber = "%d"> %s </TOneOfField>',
    [Name,
     FieldType.Name,
-    FieldType.FPCTypeName,
     FieldNumber,
     Options.ToXML]);
 
@@ -824,16 +769,12 @@ begin
   FFields.Sort(specialize TComparer<TMessageField>.Construct(@CompareMessageFields));
 end;
 
-function TMessage.GetFPCTypeName: AnsiString;
-begin
-  Result := 'T' + Canonicalize(Name);
-
-end;
-
-
 constructor TMessage.Create(_Name: AnsiString; _Fields: TMessageFields;
   _Messages: specialize TNamedObjectList<TMessage>; _Options: TOptions;
   _Enums: TEnums; _Parent: TParent);
+var
+  Field: TMessageField;
+
 begin
   inherited Create;
 
@@ -843,6 +784,11 @@ begin
   FOptions := _Options;
   FEnums := _Enums;
   FParent := _Parent;
+  MessagePBType := TMessagePBType.Create(_Name, _Parent);
+
+  for Field in FFields do
+    MessagePBType.Fields.Add(Field.FieldType);
+
 end;
 
 destructor TMessage.Destroy;
@@ -857,6 +803,9 @@ end;
 
 function TMessage.ToXML: AnsiString;
 begin
+  if Self = nil then
+    Exit('<NoMsg/>');
+
   Result:= Format('<TMessage Name = "%s"> %s%s%s%s</TMessage>'#10,
     [Name,
      Options.ToXML,
@@ -866,6 +815,12 @@ begin
 end;
 
 { TMessageField }
+
+function TMessageField.GetCanonicalizeFullNameForWriting: AnsiString;
+begin
+  Result := GetCanonicalizeFullName;
+
+end;
 
 function TMessageField.GetCanonicalizeName: AnsiString;
 begin
@@ -887,6 +842,7 @@ end;
 function TMessageField.GetCanonicalizeFullName: AnsiString;
 begin
   Result := Canonicalize(GetName);
+
 end;
 
 function TMessageField.GetName: AnsiString;
@@ -924,21 +880,13 @@ end;
 
 function TMessageField.ToXML: AnsiString;
 begin
-  Result:= Format('<MessageField Name = "%s" IsRepeated = "%s" Type = "%s" FPCType = "%s" FieldNumber = "%d"> %s</MessageField>'#10,
+  Result:= Format('<MessageField Name = "%s" IsRepeated = "%s" Type = "%s" FieldNumber = "%d"> %s</MessageField>'#10,
   [GetName,
     IfThen(FieldType. IsRepeated, 'True', 'False'),
     GetFieldType.Name,
-    GetFieldType.FPCTypeName,
     GetFieldNumber,
     GetOptions.ToXML
   ]);
-
-end;
-
-function TMessageField.HasSimpleType(Proto: TProto; RelatedProtos: TProtos
-  ): Boolean;
-begin
-  Exit(FieldType.IsSimpleType(Proto, RelatedProtos));
 
 end;
 

@@ -1346,5 +1346,6 @@ constructor EInvalidCharacter.Create(Ch: Char; Code: Integer);
 begin
   inherited Create(Format('Invalid Character %s (%d)', [Ch, Code]));
 end;
+
 end.
 

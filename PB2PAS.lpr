@@ -6,7 +6,6 @@ uses
   UtilsUnit, PBDefinitionUnit, PBCodeGeneratorUnit,
   ProtoHelperUnit, ALoggerUnit, PBOptionUnit, NamedObjectListUnit;
 
-
 var
   ProtoMap: TProtoMap;
   it: TProtoMap.TPairEnumerator;
