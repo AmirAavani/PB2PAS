@@ -59,6 +59,7 @@ type
         destructor Destroy; override;
         function ToString: AnsiString; override;
       end;
+
   private
     Name: AnsiString;
     InterfaceCode: TInterface;
@@ -369,7 +370,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
   begin
     MessageClassName := GetFPCType(aMessage.MessageType,
       CreateContext(aMessage.Parent.Message));
-    Unitcode.InterfaceCode.TypeList.Add(Format('%s{ T%s }', [Indent, aMessage.Name]));
+    Unitcode.InterfaceCode.TypeList.Add(Format('%s// message %s', [Indent, aMessage.Name]));
+    Unitcode.InterfaceCode.TypeList.Add(Format('%s{ %s }', [Indent, MessageClassName]));
     Unitcode.InterfaceCode.TypeList.Add(Format('%s%s = class(TBaseMessage)',
       [Indent, MessageClassName]));
     for Option in aMessage.Options do
@@ -515,9 +517,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       for Field in aMessage.Fields do
       begin
         CanName := Canonicalize(Field.Name);
-        if not IsSimpleType(Field.FieldType) or
-          Field.FieldType.IsRepeated then
-          Unitcode.ImplementationCode.Methods.Add(Format('  F%s.Free;', [CanName]));
+        if not IsSimpleType(Field.FieldType) or Field.FieldType.IsRepeated then
+          Unitcode.ImplementationCode.Methods.Add(Format('  FreeAndNil(F%s);', [CanName]));
       end;
       Unitcode.ImplementationCode.Methods.Add('');
       Unitcode.ImplementationCode.Methods.Add('  inherited;');
@@ -697,8 +698,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
 
       begin
         CanName := Field.CanonicalizeFullNameForWriting;
-        FieldType :=  JoinStrings([GetUnitName(Field, Proto, RelatedProtos),
-          GetFPCType(Field.FieldType, CreateContext(Field.FieldType.Parent.Message))], '.');
+        FieldType :=  GetFPCType(Field.FieldType, CreateContext(Field.FieldType.Parent.Message));
 
         if not Field.FieldType.IsRepeated then
         begin
@@ -912,7 +912,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
       GetFPCType(aField.FieldType.Parent.Message.MessageType, CreateContext(nil)),
       [rfReplaceAll]);
     if aField.FieldType.IsRepeated then
-      Result := StringReplace(Result, '[[Field.InnerFPCType]]',
+      Result := StringReplace(Result, '[[Field.ShortInnerFPCType]]',
         GetNonRepeatedType4FPC(aField.FieldType.Name), [rfReplaceAll]);
 
   end;
@@ -998,7 +998,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForOneOf(const OneOf: TOneOf;
     PtrType: AnsiString;
 
   begin
-    OneOfClassName := GetFPCType(OneOf.OneOfFieldPBType, Context);
+    OneOfClassName := GetFPCType(OneOf.OneOfFieldPBType, CreateContext(nil));
 
     for i := 0 to OneOf.Fields.Count - 1 do
     begin
@@ -1259,11 +1259,10 @@ function TPBCodeGeneratorV1.GetFPCType(PBType: TPBBaseType; Context: TContext
 
 var
   Parent: TParent;
+  RProto: TProto;
+  i: Integer;
 
 begin
-  if PBType.PackageName <> '' then
-    FmtFatalLn('Interesting %s', [PBType.PackageName]);
-
   Result := '';
   if IsSimpleType(PBType) and not IsAnEnumType(PBType) then
     Exit(UtilsUnit.GetNonRepeatedType4FPC(PBType.Name));
@@ -1280,6 +1279,21 @@ begin
     Result := 'T' + Canonicalize(PBType.Name)
   else
     Result := UtilsUnit.GetNonRepeatedType4FPC(PBType.Name);
+
+  if PBType.PackageName <> '' then
+  begin
+    for RProto in RelatedProtos do
+      if RProto.PackageName = PBType.PackageName then
+      begin
+        if (PBType is TMessagePBType)
+          and (RProto.Messages.ByName[PBType.Name] <> nil) then
+          Exit(RProto.OutputUnitName + '.' + Result)
+        else if IsAnEnumType(PBType) and (RProto.Enums.ByName[PBType.Name] <> nil) then
+          Exit(RProto.OutputUnitName + '.' + Result)
+      end;
+    FmtFatalLn('Cannot resolve %s.%s', [PBType.PackageName, PBType.Name]);
+    Exit;
+  end;
 
   Parent := PBType.Parent;
 

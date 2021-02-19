@@ -1,51 +1,44 @@
 const
  DeclareRepeatedNonSimpleFieldTemplate : AnsiString =
-  '  // Declarations for repeated [[Field.PackageNameWithDot]][[Field.Type]] [[Field.Name]] = [[Field.Number]];' + sLineBreak +
-  '  public type' + sLineBreak +
-  '    T[[CanName]] = specialize TObjectList<[[Field.UnitNameWithDot]][[Field.InnerFPCType]]>;' + sLineBreak + sLineBreak +
-  '  private' + sLineBreak +
-  '    F[[CanName]]: T[[CanName]];' + sLineBreak +
+  '[[Indent]]public type' + sLineBreak +
+  '[[Indent]]  T[[Field.CanName]] = specialize TObjectList<[[Field.UnitNameWithDot]][[Field.ShortInnerFPCType]]>;' + sLineBreak + sLineBreak +
+  '[[Indent]]private' + sLineBreak +
+  '[[Indent]]  F[[Field.CanName]]: T[[Field.CanName]];' + sLineBreak +
   '' + sLineBreak +
-  '    // Getter Functions' + sLineBreak +
-  '    function Get[[CanName]](Index: Integer): [[Field.UnitNameWithDot]][[Field.InnerFPCType]];' + sLineBreak +
-  '    function Get[[CanName]]: T[[CanName]];' + sLineBreak +
-  '    function GetOrCreate[[CanName]]: T[[CanName]];' + sLineBreak +
+  '[[Indent]]  function Get[[Field.CanName]](Index: Integer): [[Field.UnitNameWithDot]][[Field.ShortInnerFPCType]];' + sLineBreak +
+  '[[Indent]]  function Get[[Field.CanName]]: T[[Field.CanName]];' + sLineBreak +
+  '[[Indent]]  function GetOrCreate[[Field.CanName]]: T[[Field.CanName]];' + sLineBreak +
   '' + sLineBreak +
-  '  public' + sLineBreak +
-  '    property [[CanName]][Index: Integer]: [[Field.UnitNameWithDot]][[Field.InnerFPCType]] read Get[[CanName]];' + sLineBreak +
-  '    property Const[[CanName]]: T[[CanName]] read F[[CanName]];' + sLineBreak +
-  '    property Mutable[[CanName]]: T[[CanName]] read GetOrCreate[[CanName]] write F[[CanName]];' + sLineBreak;
+  '[[Indent]]public' + sLineBreak +
+  '[[Indent]]  // repeated [[Field.PackageNameWithDot]][[Field.Type]] [[Field.Name]] = [[Field.Number]];' + sLineBreak +
+  '[[Indent]]  property [[Field.CanName]][Index: Integer]: [[Field.ShortInnerFPCType]] read Get[[Field.CanName]];' + sLineBreak +
+  '[[Indent]]  property Const[[Field.CanName]]: T[[Field.CanName]] read F[[Field.CanName]];' + sLineBreak +
+  '[[Indent]]  property Mutable[[Field.CanName]]: T[[Field.CanName]] read GetOrCreate[[Field.CanName]] write F[[Field.CanName]];' + sLineBreak;
 
   ImplementRepeatedNonSimpleFieldTemplate : AnsiString =
    sLineBreak +
-  '// Implementation for repeated [[Field.Type]] [[Field.Name]] = [[Field.Number]];' + sLineBreak +
-  '// Getter Functions' + sLineBreak + sLineBreak +
-  'function [[ClassName]].Get[[CanName]](Index: Integer): [[Field.UnitNameWithDot]][[Field.InnerFPCType]];' + sLineBreak +
+  'function [[Field.ClassName]].Get[[Field.CanName]](Index: Integer): [[Field.ShortInnerFPCType]];' + sLineBreak +
   'begin' + sLineBreak +
-  '  Result := F[[CanName]][Index];' + sLineBreak + sLineBreak +
+  '  Result := F[[Field.CanName]][Index];' + sLineBreak + sLineBreak +
   'end;' + sLineBreak + sLineBreak +
-  'function [[ClassName]].Get[[CanName]]: T[[CanName]];' + sLineBreak +
+  'function [[Field.ClassName]].Get[[Field.CanName]]: T[[Field.CanName]];' + sLineBreak +
   'begin' + sLineBreak +
   '  if Self = nil then' + sLineBreak +
   '    Exit(nil);' + sLineBreak + sLineBreak +
-  '  if F[[CanName]] = nil then' + sLineBreak +
+  '  if F[[Field.CanName]] = nil then' + sLineBreak +
   '    Exit(nil);' + sLineBreak +  sLineBreak +
-  '  Result := F[[CanName]]; ' + sLineBreak + sLineBreak +
+  '  Result := F[[Field.CanName]]; ' + sLineBreak + sLineBreak +
   'end;' + sLineBreak + sLineBreak +
-  'function [[ClassName]].GetOrCreate[[CanName]]: T[[CanName]];' + sLineBreak +
+  'function [[Field.ClassName]].GetOrCreate[[Field.CanName]]: T[[Field.CanName]];' + sLineBreak +
   'begin' + sLineBreak +
   '  if Self = nil then' + sLineBreak +
   '    Exit(nil);' + sLineBreak + sLineBreak +
-  '  if Self.F[[CanName]] = nil then' + sLineBreak +
-  '    F[[CanName]] := T[[CanName]].Create;' + sLineBreak + sLineBreak +
-  '  Result := F[[CanName]]; ' + sLineBreak + sLineBreak +
+  '  if Self.F[[Field.CanName]] = nil then' + sLineBreak +
+  '    F[[Field.CanName]] := T[[Field.CanName]].Create;' + sLineBreak + sLineBreak +
+  '  Result := F[[Field.CanName]]; ' + sLineBreak + sLineBreak +
   'end;' + sLineBreak + sLineBreak;
 
-  ImplementRepeatedNonSimpleFieldToStringTemplate : AnsiString =
-  '  if F[[CanName]] <> nil then' + sLineBreak +
-  '  begin' + sLineBreak +
-  '    Result += ''[[Field.Name]] = '';' + sLineBreak +
-  '    Result += F[[CanName]].ToString;' + sLineBreak +
-  '    Result += sLineBreak;' + sLineBreak +
-  '  end;' + sLineBreak;
+
+  ImplementClearRepeatedNonSimpleFieldTemplate: AnsiString =
+      '  F[[Field.CanName]].FreeAndNil;';
 

@@ -23,7 +23,7 @@
     <RunParams>
       <FormatVersion Value="2"/>
     </RunParams>
-    <Units Count="16">
+    <Units Count="17">
       <Unit0>
         <Filename Value="PB2PAS.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -81,13 +81,17 @@
         <IsPartOfProject Value="True"/>
       </Unit13>
       <Unit14>
-        <Filename Value="modules/PB2PAS/ObjectListUnit.pp"/>
+        <Filename Value="modules/PB2PAS/NamedObjectListUnit.pp"/>
         <IsPartOfProject Value="True"/>
       </Unit14>
       <Unit15>
         <Filename Value="PBParserUnit.pp"/>
         <IsPartOfProject Value="True"/>
       </Unit15>
+      <Unit16>
+        <Filename Value="EnumTemplate.inc"/>
+        <IsPartOfProject Value="True"/>
+      </Unit16>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
