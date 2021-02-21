@@ -442,7 +442,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         Unitcode.InterfaceCode.TypeList.Add(Format('%spublic type', [Indent]));
         GenerateCodeForMap(
           Field as TMap, Unitcode,
-          Indent + '  ');
+          Indent);
         Unitcode.InterfaceCode.TypeList.Add('');
 
       end;
@@ -450,7 +450,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
     for Field in aMessage.Fields do
       GenerateCodeForMessageField(Field,
           Unitcode,
-          Indent + '  ');
+          Indent);
 
     Unitcode.InterfaceCode.TypeList.Add(Format('%sprotected ', [Indent]));
     Unitcode.InterfaceCode.TypeList.Add(Format('%s  procedure SaveToStream(Stream: TProtoStreamWriter); override;',
@@ -888,18 +888,10 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
       '[[Field.ShortFPCType]]',
       GetFPCType(aField.FieldType, CreateContext(aField.FieldType.Parent.Message)),
       [rfReplaceAll]);
-    if aField.FieldType.PackageName <> '' then
-    begin
-      Result := StringReplace(Result, '[[Field.UnitNameWithDot]]',
-        GetUnitName(aField, Proto, RelatedProtos) + '.', [rfReplaceAll]);
-        Result := StringReplace(Result, '[[Field.PackageNameWithDot]]',
-          aField.FieldType.PackageName + '.', [rfReplaceAll])
-    end
-    else
-    begin
-      Result := StringReplace(Result, '[[Field.UnitNameWithDot]]', '', [rfReplaceAll]);
-      Result := StringReplace(Result, '[[Field.PackageNameWithDot]]', '', [rfReplaceAll])
-    end;
+
+    Result := StringReplace(Result, '[[Field.PackageNameWithDot]]',
+      IfThen(aField.FieldType.PackageName = '', '', aField.FieldType.PackageName + '.'),
+      [rfReplaceAll]);
 
     Result := StringReplace(Result, '[[Field.Name]]', aField.Name,
       [rfReplaceAll]);
@@ -912,8 +904,14 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
       GetFPCType(aField.FieldType.Parent.Message.MessageType, CreateContext(nil)),
       [rfReplaceAll]);
     if aField.FieldType.IsRepeated then
-      Result := StringReplace(Result, '[[Field.ShortInnerFPCType]]',
-        GetNonRepeatedType4FPC(aField.FieldType.Name), [rfReplaceAll]);
+    begin
+      if IsAnEnumType(aField.FieldType) then
+         Result := StringReplace(Result, '[[Field.ShortInnerFPCType]]',
+         'Int32', [rfReplaceAll])
+      else
+        Result := StringReplace(Result, '[[Field.ShortInnerFPCType]]',
+          GetNonRepeatedType4FPC(aField.FieldType.Name), [rfReplaceAll]);
+    end;
 
   end;
 
@@ -932,7 +930,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
     else if aField.FieldType.IsRepeated and not IsSimpleType(aField.FieldType) then
       UnitCode.InterfaceCode.TypeList.Add(ApplyPattern(DeclareRepeatedNonSimpleFieldTemplate))
     else
-      UnitCode.InterfaceCode.TypeList.Add(ApplyPattern(DeclareRepeatedSimpleFieldTemplate));
+      UnitCode.InterfaceCode.TypeList.Add(ApplyPattern(DeclareRepeatedSimpleFieldTemplate))
   end;
 
   procedure GenerateImplementation;
@@ -1118,18 +1116,19 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
   begin
     if IsSimpleType(Map.MapFieldPBType.ValuePBType) then
       Unitcode.InterfaceCode.TypeList.Add(Format(
-        '%s%s = class(specialize TMap<%s, %s>)',
+        '%s  %s = class(specialize TMap<%s, %s>)',
         [
           Indent,
           GetFPCType(Map.FieldType, CreateContext(Map.FieldType.Parent.Message)),
           GetFPCType(Map.MapFieldPBType.KeyPBType, CreateContext(Map.FieldType.Parent.Message)),
           GetFPCType(Map.MapFieldPBType.ValuePBType, CreateContext(Map.FieldType.Parent.Message))]))
     else
-      Unitcode.InterfaceCode.TypeList.Add(Format('%s%s = class(specialize TMapSimpleKeyObjectValue<%s, %s>)',
+      Unitcode.InterfaceCode.TypeList.Add(Format('%s  %s = class(specialize TMapSimpleKeyObjectValue<%s, %s>)',
         [Indent,
          GetFPCType(Map.FieldType, CreateContext(Map.FieldType.Parent.Message)),
          GetFPCType(Map.MapFieldPBType.KeyPBType, CreateContext(Map.FieldType.Parent.Message)),
          GetFPCType(Map.MapFieldPBType.ValuePBType, CreateContext(Map.FieldType.Parent.Message))]));
+    Unitcode.InterfaceCode.TypeList.Add('');
     Unitcode.InterfaceCode.TypeList.Add(Format('%sprivate', [Indent]));
     Unitcode.InterfaceCode.TypeList.Add(Format('%s  function LoadFromStream(Stream: TProtoStreamReader): Boolean;',
       [Indent]));

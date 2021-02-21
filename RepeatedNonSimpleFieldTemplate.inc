@@ -1,11 +1,11 @@
 const
  DeclareRepeatedNonSimpleFieldTemplate : AnsiString =
   '[[Indent]]public type' + sLineBreak +
-  '[[Indent]]  T[[Field.CanName]] = specialize TObjectList<[[Field.UnitNameWithDot]][[Field.ShortInnerFPCType]]>;' + sLineBreak + sLineBreak +
+  '[[Indent]]  T[[Field.CanName]] = specialize TObjectList<[[Field.ShortInnerFPCType]]>;' + sLineBreak + sLineBreak +
   '[[Indent]]private' + sLineBreak +
   '[[Indent]]  F[[Field.CanName]]: T[[Field.CanName]];' + sLineBreak +
   '' + sLineBreak +
-  '[[Indent]]  function Get[[Field.CanName]](Index: Integer): [[Field.UnitNameWithDot]][[Field.ShortInnerFPCType]];' + sLineBreak +
+  '[[Indent]]  function Get[[Field.CanName]](Index: Integer): [[Field.ShortInnerFPCType]];' + sLineBreak +
   '[[Indent]]  function Get[[Field.CanName]]: T[[Field.CanName]];' + sLineBreak +
   '[[Indent]]  function GetOrCreate[[Field.CanName]]: T[[Field.CanName]];' + sLineBreak +
   '' + sLineBreak +

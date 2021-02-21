@@ -904,6 +904,7 @@ begin
     begin
       Tokenizer.Rewind;
       EnumFields.Add(ParseEnumField(FName))
+
     end;
 
     Token := Tokenizer.GetNextToken;

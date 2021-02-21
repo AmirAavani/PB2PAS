@@ -66,6 +66,7 @@ type
     FKeyPBType, FValuePBType: TPBBaseType;
   protected
     function GetFullName: AnsiString; override;
+    function GetName: AnsiString; override;
     function GetPackage: AnsiString; override;
 
   public
@@ -107,7 +108,6 @@ type
   TMessagePBType = class(TPBTypeWithFields)
   public
     constructor Create(aName: AnsiString; _Parent: TParent);
-
 
   end;
 
@@ -361,7 +361,8 @@ end;
 
 { TMessagePBType }
 
-constructor TMessagePBType.Create(aName: AnsiString; _Parent: TParent);
+constructor TMessagePBType.Create(aName: AnsiString; _Parent: TParent
+  );
 begin
   inherited Create(aName, False, nil, _Parent);
 
@@ -377,8 +378,8 @@ end;
 
 { TPBTypeWithFields }
 
-constructor TPBTypeWithFields.Create(aName: AnsiString; _IsRepeated: Boolean;
-  _Options: TOptions; _Parent: TParent);
+constructor TPBTypeWithFields.Create(aName: AnsiString;
+  _IsRepeated: Boolean; _Options: TOptions; _Parent: TParent);
 begin
   inherited Create(aName, _IsRepeated, _Options, _Parent);
 
@@ -396,7 +397,13 @@ end;
 
 function TMapPBType.GetFullName: AnsiString;
 begin
-  Result := Format('T%sTo%sMap', [Canonicalize(KeyPBType.Name), Canonicalize(ValuePBType.Name)]);
+  Result := Format('map<%s, %s>', [KeyPBType.Name, ValuePBType.Name]);
+
+end;
+
+function TMapPBType.GetName: AnsiString;
+begin
+  Result:= GetFullName;
 
 end;
 
@@ -409,7 +416,7 @@ end;
 constructor TMapPBType.Create(_KeyType, _ValueType: TPBBaseType; _Parent: TParent
   );
 begin
-  inherited Create('Map', False, nil, _Parent);
+  inherited Create(Format('map<%s,%s>', [_KeyType.Name, _ValueType.Name]), False, nil, _Parent);
 
   FKeyPBType := _KeyType;
   FValuePBType := _ValueType;
@@ -470,8 +477,8 @@ begin
 
 end;
 
-constructor TPBBaseType.Create(_Name: AnsiString; _IsRepeated: Boolean;
-  _Options: TOptions; _Parent: TParent);
+constructor TPBBaseType.Create(_Name: AnsiString;
+  _IsRepeated: Boolean; _Options: TOptions; _Parent: TParent);
 begin
   inherited Create;
 

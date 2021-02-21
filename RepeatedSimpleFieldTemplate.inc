@@ -4,14 +4,13 @@ const
     '[[Indent]]  T[[Field.CanName]] =  T[[Field.ShortInnerFPCType]]s;' + sLineBreak + sLineBreak +
     '[[Indent]]private' + sLineBreak +
     '[[Indent]]  F[[Field.CanName]]: T[[Field.CanName]];' + sLineBreak + sLineBreak +
-    '' + sLineBreak +
     '[[Indent]]  function Get[[Field.CanName]](Index: Integer): [[Field.ShortInnerFPCType]];' + sLineBreak +
     '[[Indent]]  function GetOrCreate[[Field.CanName]]: T[[Field.CanName]];' + sLineBreak + sLineBreak +
     '[[Indent]]public' + sLineBreak +
     '[[Indent]]  // repeated [[Field.PackageNameWithDot]][[Field.Type]] [[Field.Name]] = [[Field.Number]];' + sLineBreak +
-    '[[Indent]]property [[Field.CanName]][Index: Integer]: [[Field.ShortInnerFPCType]] read Get[[Field.CanName]];' + sLineBreak +
-    '[[Indent]]property Const[[Field.CanName]]: T[[Field.CanName]] read F[[Field.CanName]];' + sLineBreak +
-    '[[Indent]]property Mutable[[Field.CanName]]: T[[Field.CanName]] read GetOrCreate[[Field.CanName]] write F[[Field.CanName]];' + sLineBreak;
+    '[[Indent]]  property [[Field.CanName]][Index: Integer]: [[Field.ShortInnerFPCType]] read Get[[Field.CanName]];' + sLineBreak +
+    '[[Indent]]  property Const[[Field.CanName]]: T[[Field.CanName]] read F[[Field.CanName]];' + sLineBreak +
+    '[[Indent]]  property Mutable[[Field.CanName]]: T[[Field.CanName]] read GetOrCreate[[Field.CanName]] write F[[Field.CanName]];' + sLineBreak;
 
   ImplementRepeatedSimpleFieldTemplate : AnsiString =
     sLineBreak +
