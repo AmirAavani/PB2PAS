@@ -132,7 +132,7 @@ type
     property FieldType: TPBBaseType read GetFieldType;
     property Name: AnsiString read GetName;
     property CanonicalizeName: AnsiString read GetCanonicalizeName;
-    property _CanonicalizeFullName: AnsiString read GetCanonicalizeFullName;
+    property CanonicalizeFullName: AnsiString read GetCanonicalizeFullName;
     property CanonicalizeFullNameForWriting: AnsiString read GetCanonicalizeFullNameForWriting;
     property FieldNumber: Integer read GetFieldNumber;
     property Options: TOptions read GetOptions;

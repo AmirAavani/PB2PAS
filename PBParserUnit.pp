@@ -785,6 +785,7 @@ class function TBaseProtoParser.ParseAll(_InputFilename: AnsiString): TProtoMap;
     Import: AnsiString;
 
   begin
+    FMTDebugLn('Parsing %s', [ProtoFile]);
     Proto := TBaseProtoParser.Parse(ProtoFile);
     ProtoMap.Add(ProtoFile, Proto);
 

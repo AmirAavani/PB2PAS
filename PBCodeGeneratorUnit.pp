@@ -539,7 +539,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         FieldType: AnsiString;
 
       begin
-        CanName := Field._CanonicalizeFullName;
+        CanName := Field.CanonicalizeFullName;
         FieldType :=  JoinStrings([GetUnitName(Field, Proto, RelatedProtos),
           GetFPCType(Field.FieldType, CreateContext(Field.FieldType.Parent.Message))], '.');
 
@@ -561,9 +561,12 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         // Repeated Field
         if IsAnEnumType(Field.FieldType) then
         begin
-          Unitcode.ImplementationCode.Methods.Add(Format('%sfor _%s in F%s do', [Indent, CanName, CanName]));
-          Unitcode.ImplementationCode.Methods.Add(Format('%s  SaveInt32(Stream, F%s, %d);',
+          Unitcode.ImplementationCode.Methods.Add(Format('%sif  F%s <> nil then', [Indent, CanName]));
+          Unitcode.ImplementationCode.Methods.Add(Format('%sbegin', [Indent]));
+          Unitcode.ImplementationCode.Methods.Add(Format('%s  for _%s in F%s do', [Indent, CanName, CanName]));
+          Unitcode.ImplementationCode.Methods.Add(Format('%s    SaveInt32(Stream, Int32(_%s), %d);',
                            [Indent, CanName, Field.FieldNumber]));
+          Unitcode.ImplementationCode.Methods.Add(Format('%send;', [Indent]));
           Unitcode.ImplementationCode.Methods.Add('');
           Exit;
         end;
@@ -653,9 +656,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       begin
         if IsAnEnumType(Field.FieldType) and Field.FieldType.IsRepeated then
         begin
-          VarParts.Add(Format('  _%s: T%s;',  [Canonicalize(Field.Name),
-            JoinStrings([GetUnitName(Field, Proto, RelatedProtos),
-              GetNonRepeatedType4FPC(Field.FieldType.Name)], '.')]));
+          VarParts.Add(Format('  _%s: Int32;',  [Canonicalize(Field.Name),
+            GetFPCType(Field.FieldType, CreateContext(aMessage))]));
         end
       end;
 
@@ -685,33 +687,31 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
 
     procedure GenerateLoadFromStream;
 
-      procedure GenerateForOneOf(OneOf: TOneOf; CanName, FieldType: AnsiString; Indent: AnsiString); forward;
-      procedure GenerateForSimpleType(Field: TMessageField; CanName, FieldType: AnsiString; Indent: AnsiString); forward;
-      procedure GenerateForEnum(Field: TMessageField; CanName, FieldType: AnsiString; Indent: AnsiString); forward;
-      procedure GenerateForMap(aMap: TMap; CanName, FieldType: AnsiString; Indent: AnsiString); forward;
-      procedure GenerateForMessage(Field: TMessageField; CanName, FieldType: AnsiString; Indent: AnsiString); forward;
+      procedure GenerateForOneOf(OneOf: TOneOf; Indent: AnsiString); forward;
+      procedure GenerateForSimpleType(Field: TMessageField; Indent: AnsiString); forward;
+      procedure GenerateForEnum(Field: TMessageField; Indent: AnsiString); forward;
+      procedure GenerateForMap(aMap: TMap; Indent: AnsiString); forward;
+      procedure GenerateForMessage(Field: TMessageField; Indent: AnsiString); forward;
 
       procedure GenerateForField(Field: TMessageField; Indent: AnsiString);
       var
-        CanName: AnsiString;
         FieldType: AnsiString;
 
       begin
-        CanName := Field.CanonicalizeFullNameForWriting;
         FieldType :=  GetFPCType(Field.FieldType, CreateContext(Field.FieldType.Parent.Message));
 
         if not Field.FieldType.IsRepeated then
         begin
           if IsAnEnumType(Field.FieldType) then
-            GenerateForEnum(Field, CanName, FieldType, Indent + '  ')
+            GenerateForEnum(Field, Indent + '  ')
           else if IsSimpleType(Field.FieldType) then
-            GenerateForSimpleType(Field, CanName, FieldType, Indent + '  ')
+            GenerateForSimpleType(Field, Indent + '  ')
           else if Field.ClassType = TOneOf then
-            GenerateForOneOf(Field as TOneOf, CanName, FieldType, Indent + '  ')
+            GenerateForOneOf(Field as TOneOf, Indent + '  ')
           else if Field.ClassType = TMap then
-            GenerateForMap(Field as TMap, CanName, FieldType, Indent + '  ')
+            GenerateForMap(Field as TMap, Indent + '  ')
           else
-            GenerateForMessage(Field, CanName, FieldType, Indent + '  ');
+            GenerateForMessage(Field, Indent + '  ');
           Exit;
         end;
 
@@ -727,7 +727,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
           '%s        Exit(False);' +
             sLineBreak,
             [
-            Indent, CanName,
+            Indent, Field.CanonicalizeFullName,
             Indent
             ]));
           Exit;
@@ -740,7 +740,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
           '%s      Exit(False);' +
           sLineBreak,
             [
-            Indent, Canonicalize(Field.FieldType.Name), CanName,
+            Indent, Canonicalize(Field.FieldType.Name),
+            Field.CanonicalizeFullName,
             Indent
             ]));
           Exit;
@@ -753,16 +754,16 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         end;
 
         Unitcode.ImplementationCode.Methods.Add(Format(
-          '%s    if not (specialize LoadRepeatedMessage<%s>(Stream, F%s)) then' + sLineBreak +
+          '%s    if not (specialize LoadRepeatedMessage<%s>(Stream, Mutable%s)) then' + sLineBreak +
           '%s      Exit(False);' +
           sLineBreak,
-            [Indent, GetNonRepeatedType4FPC(Field.FieldType.Name), CanName,
+            [Indent, GetNonRepeatedType4FPC(Field.FieldType.Name),
+            Field.CanonicalizeFullName,
              Indent
             ]));
       end;
 
-      procedure GenerateForOneOf(OneOf: TOneOf; CanName, FieldType: AnsiString;
-        Indent: AnsiString);
+      procedure GenerateForOneOf(OneOf: TOneOf; Indent: AnsiString);
       var
         aField: TOneOfField;
 
@@ -775,47 +776,48 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
 
       end;
 
-      procedure GenerateForSimpleType(Field: TMessageField; CanName,
-        FieldType: AnsiString; Indent: AnsiString);
+      procedure GenerateForSimpleType(Field: TMessageField; Indent: AnsiString);
       begin
         Unitcode.ImplementationCode.Methods.Add(Format('%s%d:' + sLineBreak +
           '%s  %s := Load%s(Stream);' + sLineBreak,
           [Indent, Field.FieldNumber,
-           Indent, CanName, Canonicalize(Field.FieldType.Name)]));
+           Indent, Field.CanonicalizeFullNameForWriting,
+           Canonicalize(Field.FieldType.Name)]));
 
       end;
 
-      procedure GenerateForEnum(Field: TMessageField; CanName,
-        FieldType: AnsiString; Indent: AnsiString);
+      procedure GenerateForEnum(Field: TMessageField; Indent: AnsiString);
       begin
         Unitcode.ImplementationCode.Methods.Add(Format('%s%s%d: %s := %s(LoadInt32(Stream));',
-          [sLineBreak, Indent, Field.FieldNumber, CanName, FieldType]))
+          [sLineBreak, Indent, Field.FieldNumber,
+          Field.CanonicalizeFullNameForWriting, GetFPCType(Field.FieldType, CreateContext(aMessage))]))
+
       end;
 
-      procedure GenerateForMap(aMap: TMap; CanName, FieldType: AnsiString;
-        Indent: AnsiString);
+      procedure GenerateForMap(aMap: TMap; Indent: AnsiString);
       begin
         Unitcode.ImplementationCode.Methods.Add(Format('%s%d:', [Indent, aMap.FieldNumber]));
         Unitcode.ImplementationCode.Methods.Add(Format('%sbegin', [Indent]));
 
         Unitcode.ImplementationCode.Methods.Add(Format('%s  if WireType <> 2 then' + sLineBreak +
                                                        '%s    Exit(False);', [Indent, Indent]));
-        Unitcode.ImplementationCode.Methods.Add(Format('%s  if not Mutable%s.LoadFromStream(Stream) then', [Indent, CanName, Indent]));
+        Unitcode.ImplementationCode.Methods.Add(Format('%s  if not Mutable%s.LoadFromStream(Stream) then', [Indent,
+         aMap.CanonicalizeFullNameForWriting,
+         Indent]));
         Unitcode.ImplementationCode.Methods.Add(Format('%s    Exit(False);', [Indent]));
 
         Unitcode.ImplementationCode.Methods.Add(Format('%send;', [Indent]));
 
       end;
 
-      procedure GenerateForMessage(Field: TMessageField; CanName,
-        FieldType: AnsiString; Indent: AnsiString);
+      procedure GenerateForMessage(Field: TMessageField; Indent: AnsiString);
       begin
         Unitcode.ImplementationCode.Methods.Add(Format('%s%d:', [Indent, Field.FieldNumber]));
         Unitcode.ImplementationCode.Methods.Add(Format('%sbegin', [Indent]));
         Unitcode.ImplementationCode.Methods.Add(Format('%s  if WireType <> 2 then' + sLineBreak +
                                                        '%s    Exit(False);', [Indent, Indent]));
-        Unitcode.ImplementationCode.Methods.Add(Format('%s  if not LoadMessage(Stream, %s) then' + sLineBreak +
-                                                       '%s    Exit(False);', [Indent, Field.CanonicalizeFullNameForWriting, Indent]));
+        Unitcode.ImplementationCode.Methods.Add(Format('%s  if not LoadMessage(Stream, Mutable%s) then' + sLineBreak +
+                                                       '%s    Exit(False);', [Indent, Field.CanonicalizeName, Indent]));
         Unitcode.ImplementationCode.Methods.Add(Format('%send;', [Indent]));
       end;
 
