@@ -1,0 +1,81 @@
+syntax = "proto3";
+
+package test;
+option go_package = "Samples;testpb";
+
+import "Samples/test_dep1.proto";
+
+message MyMessage {
+  message A {
+    int32 a_id = 1;
+    SubMessage a_sub_message = 2;
+  }
+  A a = 1100;
+  map<int32, A> id_a_map = 1101;
+
+  oneof MyOneOf {
+    AnEnum an_enum = 12;
+    deptest.AnEnum deptest_an_enum = 13;
+    string is_country = 1;
+    string is_state = 2;
+    string is_county = 3;
+    string is_city = 4;
+    string is_street = 5;
+    string is_str = 6;
+    int32 is_i = 8;
+    float is_f = 9;
+    double is_d = 10;
+    A is_a = 11;
+  }
+  message SubMessage {
+    int32 id = 1;
+  }
+  enum AnEnum {
+    NONE = 0;
+    V1 = 1;
+    V4 = 4;
+  }
+  repeated string rep_str = 122;
+  repeated int32 rep_i = 123;
+  repeated float ref_f = 124;
+  repeated double rep_d = 125;
+  repeated A rep_a=  126;
+
+  double dd = 200;
+  float f = 201;
+  int32 i32 = 202;
+  int64 i64 = 203;
+  uint32 ui32 = 204;
+  uint64 ui64 = 205;
+  sint32 si32 = 206;
+  sint64 si64 = 207;
+  fixed32 f32 = 208;
+  fixed64 f64 = 209;
+  sfixed32 s32 = 210;
+  sfixed64 s64 = 211;
+  bool _b = 212;
+  string an_s = 213;
+
+  repeated double rdd = 300;
+  repeated float rf = 301;
+  repeated int32 ri32 = 302;
+  repeated int64 ri64 = 303;
+  repeated uint32 rui32 = 304;
+  repeated uint64 rui64 = 305;
+  repeated sint32 rsi32 = 306;
+  repeated sint64 rsi64 = 307;
+  repeated fixed32 rf32 = 308;
+  repeated fixed64 rf64 = 309;
+  repeated sfixed32 rs32 = 310;
+  repeated sfixed64 rs64 = 311;
+  repeated bool rb = 312;
+  repeated string rs = 313;
+  repeated AnEnum aenums = 314;
+
+  map<int32, SubMessage> id_sub_message_map = 420;
+  map<int32, int32> an_int_int_map = 421;
+  // map<int32, AnEnum> an_int_an_enum_map = 127;
+  // map<int32, deptest.AnEnum> an_int_to_b_num_map = 128;
+  map<int32, int32> b_int_int_map = 429;
+
+}

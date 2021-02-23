@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package deptest;
+option go_package = "Samples;testpb";
+
+enum AnEnum {
+  V0 = 0;
+  V1 = 1;
+  V2 = 2;
+}
