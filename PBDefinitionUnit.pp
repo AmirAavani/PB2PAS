@@ -528,6 +528,7 @@ end;
 function TEnumField.GetFPCValue: AnsiString;
 begin
   Result := Format('%s_%s', [Canonicalize(EnumName), Canonicalize(Self.Name)]);
+
 end;
 
 constructor TEnumField.Create(_EnumName, _Name: AnsiString; _Options: TOptions;

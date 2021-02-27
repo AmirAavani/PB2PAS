@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package test;
+option go_package = "Samples;testpb";
+
+message A {
+  message B {
+    int32 c = 1;
+  }
+
+  repeated B bs = 1;
+}

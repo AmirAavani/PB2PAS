@@ -160,6 +160,9 @@ begin
   e.MyOneOf.IsCountry := 'Iran';
   e.SaveToStream(TFileStream.Create('/tmp/e33~', fmCreate));
   LoadFromFile('/tmp/e33~', e);
+	WriteLn(e.MyOneOf.IsCountry);
+	WriteLn(e.MyOneOf.IsCity);
+	WriteLn(e.MyOneOf.AnEnum);
 
 	s := TMyMessage.TSubMessage.Create;
 	s.Id := 234;

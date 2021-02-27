@@ -26,6 +26,7 @@ message MyMessage {
     float is_f = 9;
     double is_d = 10;
     A is_a = 11;
+    bool is_b = 14;
   }
   message SubMessage {
     int32 id = 1;
@@ -77,5 +78,6 @@ message MyMessage {
   // map<int32, AnEnum> an_int_an_enum_map = 127;
   // map<int32, deptest.AnEnum> an_int_to_b_num_map = 128;
   map<int32, int32> b_int_int_map = 429;
+  AnEnum aenum = 430;
 
 }
