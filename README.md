@@ -9,17 +9,19 @@ I am making my contributions/submissions to this project solely in my personal c
     git submodule init
     git submodule update
 
-2) Build ``PB2PAS''
-    fpc -Sd PB2PAS.lpr  -Fumodules/PB2PAS -Fumodules/General-Purpose-Units -Fumodules/ALogger -Fumodules/Unicode-Functions -Fumodules/Threading
+2) Build __PB2PAS__
+    > fpc -Sd PB2PAS.lpr  -Fumodules/PB2PAS -Fumodules/General-Purpose-Units -Fumodules/ALogger -Fumodules/Unicode-Functions -Fumodules/Threading
 
-3) Running ``PB2PAS''
-    ls Samples/
-      >> Main.pp  test_dep1.proto  test.proto 
+3) Running __PB2PAS__
+    > ls Samples/
 
-    ./PB2PAS --InputFile Samples/test.proto
+    > Main.pp  test_dep1.proto  test.proto 
 
-    ls Samples/
-      >> Main.pp  test_dep1.proto  TestDep1Unit.pp  test.proto  TestUnit.pp 
+    > ./PB2PAS --InputFile Samples/test.proto
 
-    fpc -Sd Samples/Main.pp -Fumodules/PB2PAS
-    ./Samples/Main
+    > ls Samples/
+
+    > Main.pp  test_dep1.proto  TestDep1Unit.pp  test.proto  TestUnit.pp 
+
+    > fpc -Sd Samples/Main.pp -Fumodules/PB2PAS
+    > ./Samples/Main
