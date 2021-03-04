@@ -1065,6 +1065,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
     Result := Template;
     Result := StringReplace(Result, '[[Indent]]', Indent, [rfReplaceAll]);
     Result := StringReplace(Result, '[[Field.Type]]', aField.FieldType.Name, [rfReplaceAll]);
+    Result := StringReplace(Result, '[[Field.DefaultValue]]', GetDefaultValue(
+      aField.FieldType, CreateContext(aField.FieldType.Parent.Message)), [rfReplaceAll]);
     Result := StringReplace(
       Result,
       '[[Field.FullFPCType]]',
@@ -1123,6 +1125,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
   procedure GenerateImplementation;
   begin
     if not aField.FieldType.IsRepeated and IsSimpleType(aField.FieldType) then
+      UnitCode.ImplementationCode.Methods.Add(ApplyPattern(ImplementNonRepeatedSimpleFieldTemplate))
     else if not aField.FieldType.IsRepeated and not IsSimpleType(aField.FieldType) then
       UnitCode.ImplementationCode.Methods.Add(ApplyPattern(ImplementNonRepeatedNonSimpleFieldTemplate))
     else if aField.FieldType.IsRepeated and not IsSimpleType(aField.FieldType) then

@@ -163,6 +163,7 @@ begin
 	WriteLn(e.MyOneOf.IsCountry);
 	WriteLn(e.MyOneOf.IsCity);
 	WriteLn(e.MyOneOf.AnEnum);
+	WriteLn(e.ConstA.GetAId());
 
 	s := TMyMessage.TSubMessage.Create;
 	s.Id := 234;
