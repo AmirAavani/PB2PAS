@@ -901,43 +901,24 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         begin
           Unitcode.ImplementationCode.Methods.Add(Format(
           '%s      Result.F%s := Self.%s.DeepCopy();' +
-          '%s        Exit(False);' +
             sLineBreak,
             [
-            Indent, Field.CanonicalizeFullName,
+            Indent, Field.CanonicalizeFullNameForWriting,
+            Field.CanonicalizeFullNameForReading,
             Indent
             ]));
-          Exit;
-        end;
-
-        if IsSimpleType(Field.FieldType) then
+        end
+        else
         begin
           Unitcode.ImplementationCode.Methods.Add(Format(
-          '%s    if not LoadRepeated%s(Stream, Mutable%s) then' + sLineBreak +
-          '%s      Exit(False);' +
-          sLineBreak,
+          '  Result.F%s := Self.%s.DeepCopy;' +
+            sLineBreak,
             [
-            Indent, Canonicalize(Field.FieldType.Name),
             Field.CanonicalizeFullName,
-            Indent
+            Field.CanonicalizeFullNameForReading
             ]));
-          Exit;
         end;
 
-        if IsOneOfType(Field, Self.Proto, RelatedProtos) then
-        begin
-          raise EInvalidSyntax.Create(Format('oneof cannot be repeated (%s)',
-            [Field.Name]));
-        end;
-
-        Unitcode.ImplementationCode.Methods.Add(Format(
-          '%s    if not (specialize LoadRepeatedMessage<%s>(Stream, Mutable%s)) then' + sLineBreak +
-          '%s      Exit(False);' +
-          sLineBreak,
-            [Indent, GetNonRepeatedType4FPC(Field.FieldType.Name),
-            Field.CanonicalizeFullName,
-             Indent
-            ]));
       end;
 
       procedure GenerateForOneOf(OneOf: TOneOf; Indent: AnsiString);

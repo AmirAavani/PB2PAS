@@ -1227,7 +1227,6 @@ function TProto3Parser.ParseConstant: TConstant;
 // constant = fullIdent | ( [ "-" | "+" ] intLit ) | ( [ "-" | "+" ] floatLit ) | strLit | boolLit
 var
   Token: TToken;
-  Pos: Int64;
 
 begin
   Result := '';
@@ -1242,7 +1241,6 @@ begin
 
   if IsPrefix('-', Token.TokenString) or IsPrefix('+', Token.TokenString) then
   begin
-    Pos := Tokenizer.Current;
     try
       Result := Token.TokenString + ParseIntLit;
       Exit;
@@ -1260,7 +1258,6 @@ begin
 
   if Token.TokenString[1] in ['0'..'9'] then
   begin
-    Pos := Tokenizer.Current;
     try
       Result := ParseIntLit;
       Exit;
