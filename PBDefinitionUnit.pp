@@ -126,6 +126,7 @@ type
     function GetName: AnsiString; virtual;
     function GetOptions: TOptions;  virtual;
     function GetCanonicalizeFullNameForWriting: AnsiString; virtual;
+    function GetCanonicalizeFullNameForReading: AnsiString; virtual;
     function GetCanonicalizeName: AnsiString; virtual;
 
   public
@@ -134,6 +135,7 @@ type
     property CanonicalizeName: AnsiString read GetCanonicalizeName;
     property CanonicalizeFullName: AnsiString read GetCanonicalizeFullName;
     property CanonicalizeFullNameForWriting: AnsiString read GetCanonicalizeFullNameForWriting;
+    property CanonicalizeFullNameForReading: AnsiString read GetCanonicalizeFullNameForReading;
     property FieldNumber: Integer read GetFieldNumber;
     property Options: TOptions read GetOptions;
 
@@ -193,6 +195,7 @@ type
 
   TOneOfField = class(TMessageField)
   protected
+    function GetCanonicalizeFullNameForReading: AnsiString; override;
     function GetCanonicalizeFullName: AnsiString; override;
     function GetCanonicalizeFullNameForWriting: AnsiString; override;
     function GetCanonicalizeName: AnsiString; override;
@@ -237,7 +240,11 @@ type
 
   TMap = class(TMessageField)
   private
-  function GetMapFieldPBType: TMapPBType;
+    function GetMapFieldPBType: TMapPBType;
+
+  protected
+    function GetCanonicalizeFullNameForWriting: AnsiString; override;
+    function GetCanonicalizeFullNameForReading: AnsiString; override;
 
   public
     property MapFieldPBType: TMapPBType read GetMapFieldPBType;
@@ -596,6 +603,18 @@ begin
 
 end;
 
+function TMap.GetCanonicalizeFullNameForWriting: AnsiString;
+begin
+  Result:= Format('Mutable%s', [Self.CanonicalizeFullName]);
+
+end;
+
+function TMap.GetCanonicalizeFullNameForReading: AnsiString;
+begin
+  Result:= Format('Get%s', [Self.CanonicalizeFullName]);
+
+end;
+
 constructor TMap.Create(_Name: AnsiString; _FieldNumber: Integer; _KeyType,
   _ValueType: AnsiString; _Parent: TMessage);
 begin
@@ -710,6 +729,12 @@ begin
 end;
 
 { TOneOfField }
+
+function TOneOfField.GetCanonicalizeFullNameForReading: AnsiString;
+begin
+  Result := Format('%s.Get%s', [FieldType.Parent.OneOf.GetCanonicalizeFullNameForReading,
+    Canonicalize(GetName)]);
+end;
 
 function TOneOfField.GetCanonicalizeFullName: AnsiString;
 var
@@ -827,6 +852,12 @@ end;
 function TMessageField.GetCanonicalizeFullNameForWriting: AnsiString;
 begin
   Result := GetCanonicalizeFullName;
+
+end;
+
+function TMessageField.GetCanonicalizeFullNameForReading: AnsiString;
+begin
+  Result := Self.GetCanonicalizeFullName;
 
 end;
 

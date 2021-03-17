@@ -480,7 +480,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
     Unitcode.InterfaceCode.TypeList.Add(Format('%sprocedure Clear; override;', [Indent + '  ']));
     // Unitcode.InterfaceCode.TypeList.Add(Format('%sfunction ToString: AnsiString; override;', [Indent + '  ']));
     Unitcode.InterfaceCode.TypeList.Add('');
-    Unitcode.InterfaceCode.TypeList.Add('%spublic // class function', [Indent]);
+    Unitcode.InterfaceCode.TypeList.Add('%spublic // function', [Indent]);
     Unitcode.InterfaceCode.TypeList.Add('%s  function DeepCopy: %s;',
       [Indent, GetFPCType(aMessage.MessageType, CreateContext(aMessage.Parent.Message))]);
     Unitcode.InterfaceCode.TypeList.Add('');
@@ -820,7 +820,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
 
         Unitcode.ImplementationCode.Methods.Add(Format('%s  if WireType <> 2 then' + sLineBreak +
                                                        '%s    Exit(False);', [Indent, Indent]));
-        Unitcode.ImplementationCode.Methods.Add(Format('%s  if not Mutable%s.LoadFromStream(Stream) then', [Indent,
+        Unitcode.ImplementationCode.Methods.Add(Format('%s  if not %s.LoadFromStream(Stream) then', [Indent,
          aMap.CanonicalizeFullNameForWriting,
          Indent]));
         Unitcode.ImplementationCode.Methods.Add(Format('%s    Exit(False);', [Indent]));
@@ -836,7 +836,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         Unitcode.ImplementationCode.Methods.Add(Format('%s  if WireType <> 2 then' + sLineBreak +
                                                        '%s    Exit(False);', [Indent, Indent]));
         Unitcode.ImplementationCode.Methods.Add(Format('%s  if not LoadMessage(Stream, Mutable%s) then' + sLineBreak +
-                                                       '%s    Exit(False);', [Indent, Field.CanonicalizeName, Indent]));
+                                                       '%s    Exit(False);', [Indent, Field.CanonicalizeFullName, Indent]));
         Unitcode.ImplementationCode.Methods.Add(Format('%send;', [Indent]));
       end;
 
@@ -890,22 +890,17 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
           else if Field.ClassType = TOneOf then
             GenerateForOneOf(Field as TOneOf, Indent)
           else if Field.ClassType = TMap then
-            //GenerateForMap(Field as TMap, Indent + '  ')
+            GenerateForMap(Field as TMap, Indent)
           else
-            //GenerateForMessage(Field, Indent + '  ');
+            GenerateForMessage(Field, Indent);
           Exit;
         end;
-        Exit;
-
-        Unitcode.ImplementationCode.Methods.Add(Format(
-          '%s  %d: ',
-          [Indent, Field.FieldNumber]));
 
         // Repeated Field
         if MaybeGetTheEnumType(Field.FieldType) <> nil then
         begin
           Unitcode.ImplementationCode.Methods.Add(Format(
-          '%s      if not LoadRepeatedInt32(Stream, Mutable%s) then' +
+          '%s      Result.F%s := Self.%s.DeepCopy();' +
           '%s        Exit(False);' +
             sLineBreak,
             [
@@ -951,18 +946,18 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
 
       begin
         Unitcode.ImplementationCode.Methods.Add(Format(
-          '%sif Self.%s <> nil then', [Indent, OneOf.CanonicalizeFullName]));
+          '%sif Self.Const%s <> nil then', [Indent, OneOf.CanonicalizeFullName]));
         Unitcode.ImplementationCode.Methods.Add(Format(
             '%sbegin', [Indent]));
 
         for aField in OneOf.Fields do
         begin
           GenerateForField(aField, Indent + '  ');
+
         end;
 
-        Unitcode.ImplementationCode.Methods.Add(sLineBreak);
         Unitcode.ImplementationCode.Methods.Add(Format(
-            '%send;', [Indent]));
+            sLineBreak + '%send;' + sLineBreak, [Indent]));
 
       end;
 
@@ -978,52 +973,77 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         Unitcode.ImplementationCode.Methods.Add(Format('%sif Int32(Self.%s) <> 0 then'+
         sLineBreak+
         '%sbegin',
-          [Indent, Field.CanonicalizeFullName, Indent]));
+          [Indent, Field.CanonicalizeFullNameForReading, Indent]));
 
-        Unitcode.ImplementationCode.Methods.Add(Format('%s  Result.F%s := Self.F%s;',
-          [Indent, Field.CanonicalizeName, Field.CanonicalizeName]));
+        Unitcode.ImplementationCode.Methods.Add(Format('%s  Result.%s := Self.F%s;',
+          [Indent, Field.CanonicalizeFullNameForWriting, Field.CanonicalizeFullNameForReading]));
 
-        Unitcode.ImplementationCode.Methods.Add(Format(sLineBreak +'%send;',
+        Unitcode.ImplementationCode.Methods.Add(Format(sLineBreak +'%send;' + sLineBreak,
           [Indent]));
 
       end;
 
       procedure GenerateForMap(aMap: TMap; Indent: AnsiString);
       begin
-        Unitcode.ImplementationCode.Methods.Add(Format('%s%d:', [Indent, aMap.FieldNumber]));
-        Unitcode.ImplementationCode.Methods.Add(Format('%sbegin', [Indent]));
+        Unitcode.ImplementationCode.Methods.Add(
+          Format('  if Self.%s <> nil then' + sLineBreak +
+                 '  begin',
+            [aMap.CanonicalizeFullNameForReading]));
+        Unitcode.ImplementationCode.Methods.Add(
+          Format('    for it%s in Self.%s do',
+            [aMap.CanonicalizeName, aMap.CanonicalizeFullNameForReading]));
+        Unitcode.ImplementationCode.Methods.Add('    begin');
+        if IsSimpleType(aMap.MapFieldPBType.ValuePBType) then
+          Unitcode.ImplementationCode.Methods.Add(Format('      Result.%s.Add(it%s.Key, it%s.Value);' + sLineBreak,
+           [aMap.CanonicalizeFullNameForWriting,
+            aMap.CanonicalizeName,
+            aMap.CanonicalizeName]))
+        else
+          Unitcode.ImplementationCode.Methods.Add(Format('      Result.%s.Add(it%s.Key, it%s.Value.DeepCopy());' + sLineBreak,
+           [aMap.CanonicalizeFullNameForWriting,
+            aMap.CanonicalizeName,
+            aMap.CanonicalizeName]));
 
-        Unitcode.ImplementationCode.Methods.Add(Format('%s  if WireType <> 2 then' + sLineBreak +
-                                                       '%s    Exit(False);', [Indent, Indent]));
-        Unitcode.ImplementationCode.Methods.Add(Format('%s  if not Mutable%s.LoadFromStream(Stream) then', [Indent,
-         aMap.CanonicalizeFullNameForWriting,
-         Indent]));
-        Unitcode.ImplementationCode.Methods.Add(Format('%s    Exit(False);', [Indent]));
-
-        Unitcode.ImplementationCode.Methods.Add(Format('%send;', [Indent]));
+        Unitcode.ImplementationCode.Methods.Add('    end;' + sLineBreak +
+                                                '  end;');
 
       end;
 
       procedure GenerateForMessage(Field: TMessageField; Indent: AnsiString);
       begin
-        Unitcode.ImplementationCode.Methods.Add(Format('%s%d:', [Indent, Field.FieldNumber]));
-        Unitcode.ImplementationCode.Methods.Add(Format('%sbegin', [Indent]));
-        Unitcode.ImplementationCode.Methods.Add(Format('%s  if WireType <> 2 then' + sLineBreak +
-                                                       '%s    Exit(False);', [Indent, Indent]));
-        Unitcode.ImplementationCode.Methods.Add(Format('%s  if not LoadMessage(Stream, Mutable%s) then' + sLineBreak +
-                                                       '%s    Exit(False);', [Indent, Field.CanonicalizeName, Indent]));
-        Unitcode.ImplementationCode.Methods.Add(Format('%send;', [Indent]));
+        Unitcode.ImplementationCode.Methods.Add(Format('%sResult.%s := Self.%s.DeepCopy;' + sLineBreak,
+         [Indent, Field.CanonicalizeFullNameForWriting, Field.CanonicalizeFullNameForReading]));
       end;
 
 
     var
       Field: TMessageField;
-
+      HasMap: Boolean;
     begin
       Unitcode.ImplementationCode.Methods.Add(Format('function %s.DeepCopy: %s;',
         [GetFPCType(aMessage.MessageType, CreateContext(nil)),
          GetFPCType(aMessage.MessageType, CreateContext(nil))]));
+      HasMap := False;
+      for Field in aMessage.Fields do
+        if (not Field.FieldType.IsRepeated) and (Field.ClassType = TMap) then
+        begin
+          if not HasMap then
+          begin
+            Unitcode.ImplementationCode.Methods.Add('var');
+
+          end;
+          HasMap := True;
+          Unitcode.ImplementationCode.Methods.Add(Format('  it%s: %s.TTreePair;',
+              [Field.CanonicalizeName,
+               GetFPCType(Field.FieldType, CreateContext(aMessage))]));
+
+        end;
+      if HasMap then
+        Unitcode.ImplementationCode.Methods.Add('');
+
       Unitcode.ImplementationCode.Methods.Add('begin');
+      Unitcode.ImplementationCode.Methods.Add('  if Self = nil then');
+      Unitcode.ImplementationCode.Methods.Add('    Exit(nil);' + sLineBreak);
       Unitcode.ImplementationCode.Methods.Add(Format('  Result := %s.Create;',
         [GetFPCType(aMessage.MessageType, CreateContext(nil))]));
       Unitcode.ImplementationCode.Methods.Add('');
@@ -1234,6 +1254,12 @@ procedure TPBCodeGeneratorV1.GenerateCodeForOneOf(const OneOf: TOneOf;
       end;
 
       Unitcode.ImplementationCode.Methods.Add(Format('begin', []));
+      Unitcode.ImplementationCode.Methods.Add(Format(
+                 '  if _%s = %s then' + sLineBreak +
+                 '  begin' + sLineBreak +
+                 '    Exit;' + sLineBreak +
+                 '  end;' + sLineBreak, [Canonicalize(Field.Name),
+                 Self.GetDefaultValue(Field.FieldType, CreateContext(nil))]));
       if IsSimpleType(Field.FieldType) then
       begin
         Unitcode.ImplementationCode.Methods.Add('  PData := new(%s);',

@@ -19,7 +19,7 @@ begin
 end;
 
 var
-  e: TMyMessage;
+  e, ec: TMyMessage;
   s: TMyMessage.TSubMessage;
 
 begin
@@ -178,6 +178,14 @@ begin
 	e.IdAMap[245].Aid := 245;
   e.SaveToStream(TFileStream.Create('/tmp/e35~', fmCreate));
   LoadFromFile('/tmp/e35~', e);
+  
+	WriteLn('-Copied');
+	ec := e.DeepCopy;
+	WriteLn('+Copied');
+  ec.SaveToStream(TFileStream.Create('/tmp/ec1~', fmCreate));
  
   e.Free;
+  ec.SaveToStream(TFileStream.Create('/tmp/ec2~', fmCreate));
+  ec.Free;
+
 end.
