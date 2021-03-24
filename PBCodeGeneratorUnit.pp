@@ -461,6 +461,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         Unitcode.InterfaceCode.TypeList.Add('');
 
       end;
+    AllMaps.Free;
 
     for Field in aMessage.Fields do
       GenerateCodeForMessageField(Field,
@@ -689,6 +690,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         Unitcode.ImplementationCode.Methods.Add('');
 
       end;
+      VarParts.Free;
 
       Unitcode.ImplementationCode.Methods.Add('begin');
 
@@ -1611,6 +1613,7 @@ begin
     cg.Free;
 
   end;
+  it.Free;
 
   AllProtos.Clear;
   Allprotos.Free;
@@ -1621,7 +1624,6 @@ begin
   inherited;
 
 end;
-
 
 end.
 

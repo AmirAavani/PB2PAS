@@ -518,6 +518,7 @@ end;
 destructor TEnum.Destroy;
 begin
   FOptions.Free;
+  FAllFields.Free;
 
   inherited Destroy;
 end;
@@ -830,6 +831,8 @@ begin
   FMessages.Free;
   FOptions.Free;
   FEnums.Free;
+
+  MessagePBType.Free;
 
   inherited Destroy;
 end;
