@@ -2,9 +2,9 @@ program PB2PAS;
 
 {$mode objfpc}{$H+}
 uses
-  cthreads, Classes, sysutils, ParameterManagerUnit, PBParserUnit, StringUnit,
-  UtilsUnit, PBDefinitionUnit, PBCodeGeneratorUnit,
-  ProtoHelperUnit, ALoggerUnit, PBOptionUnit, NamedObjectListUnit;
+  cthreads, Classes, sysutils, ParameterManagerUnit, PBParserUnit,
+  StringUnit, UtilsUnit, PBDefinitionUnit, PBCodeGeneratorUnit, ProtoHelperUnit,
+  ALoggerUnit, PBOptionUnit, NamedObjectListUnit;
 
 var
   ProtoMap: TProtoMap;
