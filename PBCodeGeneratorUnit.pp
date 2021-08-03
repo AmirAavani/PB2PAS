@@ -481,7 +481,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
     Unitcode.InterfaceCode.TypeList.Add(Format('%sprocedure Clear; override;', [Indent + '  ']));
     // Unitcode.InterfaceCode.TypeList.Add(Format('%sfunction ToString: AnsiString; override;', [Indent + '  ']));
     Unitcode.InterfaceCode.TypeList.Add('');
-    Unitcode.InterfaceCode.TypeList.Add('%spublic // function', [Indent]);
+    Unitcode.InterfaceCode.TypeList.Add('%spublic // functions', [Indent]);
     Unitcode.InterfaceCode.TypeList.Add('%s  function DeepCopy: %s;',
       [Indent, GetFPCType(aMessage.MessageType, CreateContext(aMessage.Parent.Message))]);
     Unitcode.InterfaceCode.TypeList.Add('');
