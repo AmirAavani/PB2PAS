@@ -191,6 +191,19 @@ type
 
   TEnums = specialize TNamedObjectList<TEnum>;
 
+  TService = class(TPBBaseType)
+  public type
+    TRPCMethod = class(TPBBaseType)
+    end;
+    TRPCMethods = specialize TNamedObjectList<TRPCMethod>;
+
+  protected
+  public
+
+  end;
+
+  TServices = specialize TNamedObjectList<TService>;
+
   { TOneOfField }
 
   TOneOfField = class(TMessageField)

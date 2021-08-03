@@ -27,7 +27,7 @@ type
 implementation
 
 uses
-  UtilsUnit, StringUnit, ALoggerUnit, PBOptionUnit;
+  UtilsUnit, StringUnit, ALoggerUnit, PBOptionUnit, PathHelperUnit;
 
 type
   TTokenKind = (ttkStart, ttkDot, ttkOpenBrace, ttkCloseBrace, ttkOpenPar,
@@ -779,25 +779,32 @@ end;
 
 class function TBaseProtoParser.ParseAll(_InputFilename: AnsiString): TProtoMap;
 
-  procedure RecParse(ProtoFile: AnsiString; ProtoMap: TProtoMap);
+  procedure RecParse(FilePath, ProtoFile: AnsiString; ProtoMap: TProtoMap);
   var
     Proto: TProto;
     Import: AnsiString;
 
   begin
-    FMTDebugLn('Parsing %s', [ProtoFile]);
-    Proto := TBaseProtoParser.Parse(ProtoFile);
-    ProtoMap.Add(ProtoFile, Proto);
+    FMTDebugLn('Parsing %s', [JoinPath(FilePath, ProtoFile)]);
+
+    Proto := TBaseProtoParser.Parse(JoinPath(FilePath, ProtoFile));
+    ProtoMap.Add(JoinPath(FilePath, ProtoFile), Proto);
 
     for Import in Proto.Imports do
-      if ProtoMap.Find(Import) = nil then
-        RecParse(Import, ProtoMap);
+      if ProtoMap.Find(JoinPath(FilePath, Import)) = nil then
+        RecParse(FilePath, Import, ProtoMap);
   end;
+
+var
+  Filename: AnsiString;
 
 begin
   Result := TProtoMap.Create;
+  Filename:= _InputFilename;
+  if not IsPrefix('./', _InputFilename) and not IsPrefix('/', _InputFilename) then
+    Filename := './' + _InputFilename;
 
-  RecParse(_InputFilename, Result);
+  RecParse(ExtractFilePath(Filename), ExtractFileName(Filename), Result);
 
 end;
 

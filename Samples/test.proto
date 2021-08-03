@@ -1,7 +1,7 @@
 syntax = "proto3";
 
 package test;
-option go_package = "Samples;testpb";
+option go_package = "./Samples";
 
 import "Samples/test_dep1.proto";
 
@@ -80,4 +80,8 @@ message MyMessage {
   map<int32, int32> b_int_int_map = 429;
   AnEnum aenum = 430;
 
+}
+
+service MessageHandler {
+  rpc Send(MyMessage) returns (MyMessage);
 }

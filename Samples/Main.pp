@@ -181,6 +181,7 @@ begin
   
 	WriteLn('-Copied');
 	ec := e.DeepCopy;
+	WriteLn(ec.ToJSON);
 	WriteLn('+Copied');
   ec.SaveToStream(TFileStream.Create('/tmp/ec1~', fmCreate));
  

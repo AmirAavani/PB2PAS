@@ -481,7 +481,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
     Unitcode.InterfaceCode.TypeList.Add(Format('%sprocedure Clear; override;', [Indent + '  ']));
     // Unitcode.InterfaceCode.TypeList.Add(Format('%sfunction ToString: AnsiString; override;', [Indent + '  ']));
     Unitcode.InterfaceCode.TypeList.Add('');
-    Unitcode.InterfaceCode.TypeList.Add('%spublic // function', [Indent]);
+    Unitcode.InterfaceCode.TypeList.Add('%spublic // functions', [Indent]);
     Unitcode.InterfaceCode.TypeList.Add('%s  function DeepCopy: %s;',
       [Indent, GetFPCType(aMessage.MessageType, CreateContext(aMessage.Parent.Message))]);
     Unitcode.InterfaceCode.TypeList.Add('');
@@ -1493,10 +1493,9 @@ begin
     for RProto in RelatedProtos do
       if RProto.PackageName = PBType.PackageName then
       begin
-        if (PBType is TMessagePBType)
-          and (RProto.Messages.ByName[PBType.Name] <> nil) then
+        if RProto.Messages.ByName[PBType.Name] <> nil then
           Exit(RProto.OutputUnitName + '.' + Result)
-        else if (MaybeGetTheEnumType(PBType) <> nil) and (RProto.Enums.ByName[PBType.Name] <> nil) then
+        else if RProto.Enums.ByName[PBType.Name] <> nil then
           Exit(RProto.OutputUnitName + '.' + Result)
       end;
     FmtFatalLn('Cannot resolve %s.%s', [PBType.PackageName, PBType.Name]);
