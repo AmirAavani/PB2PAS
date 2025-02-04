@@ -3,7 +3,7 @@ syntax = "proto3";
 package test;
 option go_package = "./Samples";
 
-import "Samples/test_dep1.proto";
+import "test_dep1.proto";
 
 message MyMessage {
   message A {
@@ -82,6 +82,6 @@ message MyMessage {
 
 }
 
-service MessageHandler {
-  rpc Send(MyMessage) returns (MyMessage);
-}
+//service MessageHandler {
+//  rpc Send(MyMessage) returns (MyMessage);
+//}

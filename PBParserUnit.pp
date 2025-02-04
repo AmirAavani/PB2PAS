@@ -241,7 +241,7 @@ function TTokenizer.GetNextToken: TToken;
     '@': Result.Kind := tckAtSgin;
     '+': Result.Kind := tckPlus
     else
-      FatalLn(Result.ch + ' ' + IntToStr(Ord(Result.Ch)));
+      ALoggerUnit.FmtFatalLnIFFalse(False, Result.ch + ' ' + IntToStr(Ord(Result.Ch)), []);
       raise EInvalidCharacter.Create(Result.ch, Ord(Result.Ch));
     end;
 
@@ -386,9 +386,11 @@ begin
     end
     else
     begin
-      FatalLn(CurrentChar.ch + ' Ch:' + IntToStr(Ord(CurrentChar.Ch)) +
+      ALoggerUnit.FmtFatalLnIFFalse(False,
+        CurrentChar.ch + ' Ch:' + IntToStr(Ord(CurrentChar.Ch)) +
         ' Kind:' + IntToStr(Ord(CurrentChar.Kind)) +
-        ' Result:' + Result.TokenString);
+        ' Result:' + Result.TokenString,
+        []);
       raise Exception.Create(CurrentChar.ch + ' ' + IntToStr(Ord(CurrentChar.Ch)) +
         ' Result:' + Result.TokenString);
     end;
@@ -785,7 +787,7 @@ class function TBaseProtoParser.ParseAll(_InputFilename: AnsiString): TProtoMap;
     Import: AnsiString;
 
   begin
-    FMTDebugLn('Parsing %s', [JoinPath(FilePath, ProtoFile)]);
+    ALoggerUnit.GetLogger.FMTDebugLn('Parsing %s', [JoinPath(FilePath, ProtoFile)]);
 
     Proto := TBaseProtoParser.Parse(JoinPath(FilePath, ProtoFile));
     ProtoMap.Add(JoinPath(FilePath, ProtoFile), Proto);

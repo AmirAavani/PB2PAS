@@ -1498,7 +1498,10 @@ begin
         else if RProto.Enums.ByName[PBType.Name] <> nil then
           Exit(RProto.OutputUnitName + '.' + Result)
       end;
-    FmtFatalLn('Cannot resolve %s.%s', [PBType.PackageName, PBType.Name]);
+    ALoggerUnit.FmtFatalLnIFFalse(
+      False,
+      'Cannot resolve %s.%s',
+      [PBType.PackageName, PBType.Name]);
     Exit;
   end;
 
