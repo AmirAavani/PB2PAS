@@ -12,10 +12,12 @@ type
   TIntList = specialize TList<Integer>;
   TIdentifier = AnsiString;
   TFullIdentifier = AnsiString;
+  TFullIdentifiers = specialize TList<TFullIdentifier>;
   TMessage = class;
   TImports = class;
   TProto = class;
   TProtos = specialize TList<TProto>;
+  TService = class;
 
   TOneOf = class;
   // TType = AnsiString;
@@ -24,30 +26,45 @@ type
     OneOf: TOneOf;
     Message: TMessage;
     Proto: TProto;
+    Service: TService;
   end;
 
 type
 
+  { TNamedObject }
+
+  TNamedObject = class(TObject)
+  private
+    FName: AnsiString;
+  protected
+
+    function GetName: AnsiString; virtual;
+    function GetFullName: AnsiString; virtual;
+
+  public
+    property Name: AnsiString read GetName;
+    property FullName: AnsiString read GetFullName;
+    function ToXML: AnsiString; virtual;
+
+    constructor Create(constref _Name: AnsiString);
+
+  end;
+
   { TPBBaseType }
 
-  TPBBaseType = class(TObject)
+  TPBBaseType = class(TNamedObject)
   protected
     FParent: TParent;
-    FName: AnsiString;
     FOptions: TOptions;
     FIsRepeated: Boolean;
 
   protected
     function GetNonRepeatedType4FPC: AnsiString; virtual;
-    function GetFullName: AnsiString; virtual;
-    function GetName: AnsiString; virtual;
     function GetPackage: AnsiString; virtual;
 
 
   public
     property Parent: TParent read FParent;
-    property Name: AnsiString read GetName;
-    property FullName: AnsiString read GetFullName;
     property PackageName: AnsiString read GetPackage;
     property Options: TOptions read FOptions;
     property NonRepeatedType4FPC: AnsiString read GetNonRepeatedType4FPC;
@@ -55,7 +72,7 @@ type
 
     constructor Create(_Name: AnsiString; _IsRepeated: Boolean;
         _Options: TOptions; _Parent: TParent);
-    function ToXML: AnsiString; virtual;
+    function ToXML: AnsiString; override;
 
   end;
 
@@ -191,14 +208,62 @@ type
 
   TEnums = specialize TNamedObjectList<TEnum>;
 
-  TService = class(TPBBaseType)
+  { TServicePBType }
+
+  TServicePBType = class(TPBBaseType)
+  public
+    constructor Create(aName: AnsiString; _Parent: TParent);
+
+  end;
+
+  { TService }
+
+  TService = class(TNamedObject)
+  private
+    FParent: TParent;
   public type
-    TRPCMethod = class(TPBBaseType)
+
+    { TRPCMethod }
+
+    TRPCMethod = class(TNamedObject)
+    private
+      FInput: TFullIdentifier;
+      FOutput: TFullIdentifier;
+
+    public
+      property Input: TFullIdentifier read FInput;
+      property Output: TFullIdentifier read FOutput;
+
+
+      constructor Create(
+          const _Name: AnsiString;
+          _Input: TFullIdentifier;
+          _Output: TFullIdentifier);
+      destructor Destroy; override;
+
+      function ToXML: AnsiString; override;
     end;
     TRPCMethods = specialize TNamedObjectList<TRPCMethod>;
 
   protected
+    FRPCS: TRPCMethods;
+    FOptions: TOptions;
+    FServicePBType: TServicePBType;
+
   public
+    property RPCS: TRPCMethods read FRPCS;
+    property Options: TOptions read FOptions;
+    property ServiceType: TServicePBType read FServicePBType;
+    property Parent: TParent read FParent;
+
+    constructor Create(
+        _Name: AnsiString;
+        _Options: TOptions;
+        _RPCS: TService.TRPCMethods;
+        _Parent: TParent);
+    destructor Destroy; override;
+
+    function ToXML: AnsiString; override;
 
   end;
 
@@ -329,6 +394,7 @@ type
     FOptions: TOptions;
     FMessages: TMessages;
     FEnums: TEnums;
+    FServices: TServices;
     function GetInputProtoFilename: AnsiString;
     function GetOutputUnitName: AnsiString;
     function GetPackageName: AnsiString;
@@ -340,13 +406,14 @@ type
     property Options: TOptions read FOptions;
     property Messages: TMessages read FMessages;
     property Enums: TEnums read FEnums;
+    property Services: TServices read FServices;
     property Syntax: AnsiString read GetSyntax;
     property InputProtoFilename: AnsiString read GetInputProtoFilename;
     property PackageName: AnsiString read GetPackageName;
     property OutputUnitName: AnsiString read GetOutputUnitName;
 
     constructor Create(_Imports: TImports; _Options: TOptions;
-  _Messages: TMessages; _Enums: TEnums; OtherParams: TStringList);
+  _Messages: TMessages; _Enums: TEnums; _Services: TServices; OtherParams: TStringList);
     destructor Destroy; override;
 
     function ToXML: AnsiString;
@@ -364,18 +431,24 @@ type
   TConstant = AnsiString;
   TProtoMap = specialize TMapSimpleKeyObjectValue<AnsiString, TProto>;
 
-function CreateParent(anOneOf: TOneOf; aMessage: TMessage; aProto: TProto): TParent;
+function CreateParent(
+  anOneOf: TOneOf;
+  aMessage: TMessage;
+  aProto: TProto;
+  aService: TService): TParent;
 
 
 implementation
 uses
   UtilsUnit, StringUnit, strutils, Generics.Defaults;
 
-function CreateParent(anOneOf: TOneOf; aMessage: TMessage; aProto: TProto): TParent;
+function CreateParent(anOneOf: TOneOf; aMessage: TMessage; aProto: TProto;
+  aService: TService): TParent;
 begin
   Result.OneOf := anOneOf;
   Result.Message := aMessage;
   Result.Proto := aProto;
+  Result.Service := aService;
 
 end;
 
@@ -462,25 +535,6 @@ begin
 
 end;
 
-function TPBBaseType.GetFullName: AnsiString;
-begin
-  Result := FName;
-
-end;
-
-function TPBBaseType.GetName: AnsiString;
-var
-  StrList: TStringList;
-
-begin
-  StrList := Split(GetFullName, '.');
-
-  Result := StrList[StrList.Count - 1];
-
-  StrList.Free;
-
-end;
-
 function TPBBaseType.GetPackage: AnsiString;
 var
   StrList: TStringList;
@@ -500,7 +554,7 @@ end;
 constructor TPBBaseType.Create(_Name: AnsiString;
   _IsRepeated: Boolean; _Options: TOptions; _Parent: TParent);
 begin
-  inherited Create;
+  inherited Create(_Name);
 
   FParent := _Parent;
   FOptions := _Options;
@@ -511,8 +565,9 @@ end;
 
 function TPBBaseType.ToXML: AnsiString;
 begin
-  Result := Format('<%s FullName = "%s" Package = "%s" Name = "%s">%s',
-    [Self.ClassName, FullName, PackageName, Name, FOptions.ToXML]);
+  Result := inherited ToXML;
+  Result := Format('<%s Package = "%s">%s%s</%s>',
+    [Self.ClassName, PackageName, Result, FOptions.ToXML, Self.ClassName]);
 
 end;
 
@@ -542,6 +597,77 @@ begin
     [Name, Options.ToXML]);
   Result += AllFields.ToXML;
   Result += Format('</TEnum>', []);
+end;
+
+{ TServicePBType }
+
+constructor TServicePBType.Create(aName: AnsiString; _Parent: TParent);
+begin
+  inherited Create(aName, False, nil, _Parent);
+
+end;
+
+{ TService }
+
+constructor TService.Create(_Name: AnsiString; _Options: TOptions;
+  _RPCS: TService.TRPCMethods; _Parent: TParent);
+begin
+  inherited Create(_Name);
+
+  FOptions := _Options;
+  FRPCS := _RPCS;
+  Self.FServicePBType := TServicePBType.Create(_Name, CreateParent(nil, nil, nil, nil));
+  FParent := _Parent;
+
+end;
+
+destructor TService.Destroy;
+begin
+  Self.RPCS.Free;
+  Self.ServiceType.Free;
+
+  inherited Destroy;
+end;
+
+function TService.ToXML: AnsiString;
+begin
+  Result := inherited ToXML;
+  Result:= Format('<Service> %s %s %s</Service>',
+    [Result,
+    Options.ToXML,
+    RPCs.TOXML]
+    )
+
+end;
+
+{ TService.TRPCMethod }
+
+constructor TService.TRPCMethod.Create(
+  const _Name: AnsiString;
+  _Input: TFullIdentifier;
+  _Output: TFullIdentifier);
+begin
+  inherited Create(_Name);
+
+  FInput := _Input;
+  FOutput := _Output;
+end;
+
+destructor TService.TRPCMethod.Destroy;
+begin
+  inherited Destroy;
+end;
+
+function TService.TRPCMethod.ToXML: AnsiString;
+begin
+  Result:= inherited ToXML;
+
+  Result := Format('<RPC Input="%s" Output="%s">%s</RPC>',
+    [Self.Input,
+    Self.Output,
+    Result
+    ]);
+
 end;
 
 { TEnumField }
@@ -637,13 +763,13 @@ begin
      False,
      _FieldNumber,
      nil,
-     CreateParent(nil, _Parent, nil));
+     CreateParent(nil, _Parent, nil, nil));
 
    FFieldPBType.Free;
    FFieldPBType := TMapPBType.Create(
-     TPBBaseType.Create(_KeyType, False, nil, CreateParent(nil, _Parent, nil)),
-     TPBBaseType.Create(_ValueType, False, nil, CreateParent(nil, _Parent, nil)),
-     CreateParent(nil, _Parent, nil));
+     TPBBaseType.Create(_KeyType, False, nil, CreateParent(nil, _Parent, nil, nil)),
+     TPBBaseType.Create(_ValueType, False, nil, CreateParent(nil, _Parent, nil, nil)),
+     CreateParent(nil, _Parent, nil, nil));
 
 end;
 
@@ -712,11 +838,11 @@ constructor TOneOf.Create(_Name: AnsiString; _Fields: TOneOfFields;
   ParentMessage: TMessage);
 begin
   inherited Create(_Name, _Name, False, -1, TOptions.Create,
-    CreateParent(nil, ParentMessage, nil));
+    CreateParent(nil, ParentMessage, nil, nil));
 
   OneOfFields := _Fields;
   FFieldPBType.Free;
-  FFieldPBType := TOneOfPBType.Create(_Name, CreateParent(nil, ParentMessage, nil));
+  FFieldPBType := TOneOfPBType.Create(_Name, CreateParent(nil, ParentMessage, nil, nil));
 
 end;
 
@@ -739,6 +865,42 @@ begin
   for OOField in Self.OneOfFields do
     Result += OOField.ToXML;
   Result += Format('</OneOf>'#10, []);
+
+end;
+
+{ TNamedObject }
+
+function TNamedObject.GetName: AnsiString;
+var
+  StrList: TStringList;
+
+begin
+  StrList := Split(GetFullName, '.');
+
+  Result := StrList[StrList.Count - 1];
+
+  StrList.Free;
+
+end;
+
+function TNamedObject.GetFullName: AnsiString;
+begin
+  Result := FName;
+
+end;
+
+function TNamedObject.ToXML: AnsiString;
+begin
+  Result := Format('<%s FullName = "%s" Name = "%s" />',
+    [Self.ClassName, FullName, Name]);
+
+end;
+
+constructor TNamedObject.Create(constref _Name: AnsiString);
+begin
+  inherited Create;
+
+  FName := _Name;
 
 end;
 
@@ -782,7 +944,7 @@ constructor TOneOfField.Create(_Name: AnsiString; _OneOfFieldType: AnsiString;
   _Parent: TOneOf);
 begin
   inherited Create(_Name, _OneOfFieldType, _IsRepeated, _FieldNumber, _Options,
-    CreateParent(_Parent, nil, nil));
+    CreateParent(_Parent, nil, nil, nil));
 
 end;
 
@@ -984,7 +1146,8 @@ begin
 end;
 
 constructor TProto.Create(_Imports: TImports; _Options: TOptions;
-  _Messages: TMessages; _Enums: TEnums; OtherParams: TStringList);
+  _Messages: TMessages; _Enums: TEnums; _Services: TServices;
+  OtherParams: TStringList);
 begin
   inherited Create;
 
@@ -992,6 +1155,7 @@ begin
   FOptions := _Options;
   FMessages := _Messages;
   FEnums := _Enums;
+  FServices := _Services;
   FOtherParams := OtherParams;
 
 end;
@@ -1002,6 +1166,7 @@ begin
   Options.Free;
   Messages.Free;
   Enums.Free;
+  Services.Free;
   FOtherParams.Free;
 
   inherited Destroy;
@@ -1009,14 +1174,15 @@ end;
 
 function TProto.ToXML: AnsiString;
 begin
-  Result := Format('<TProto FileName = "%s" Path= "%s" Package = "%s" >'#10'%s%s%s%s </TProto>'#10,
+  Result := Format('<TProto FileName = "%s" Path= "%s" Package = "%s" >'#10'%s%s%s%s%s</TProto>'#10,
   [ExtractFileName(InputProtoFilename),
    ExtractFileDir(InputProtoFilename),
    PackageName,
    Options.ToXML,
    Imports.ToXML,
    Messages.ToXML,
-   Enums.ToXML
+   Enums.ToXML,
+   Services.ToXML
   ]);
 
 end;

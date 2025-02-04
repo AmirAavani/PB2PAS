@@ -85,3 +85,9 @@ message MyMessage {
 //service MessageHandler {
 //  rpc Send(MyMessage) returns (MyMessage);
 //}
+//service MessageHandler {
+//  rpc Send(MyMessage) returns (MyMessage);
+//  rpc YourMessage(MyMessage) returns (MyMessage);
+//  rpc ThirdOne(MyMessage) returns (MyMessage);
+//
+//}

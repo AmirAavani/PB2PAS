@@ -147,6 +147,8 @@ type
     function ParseMap(ParentMessage: TMessage): TMap;
     function ParseMessageField(ParentMessage: TMessage): TMessageField;
     function ParseConstant: TConstant;
+    function ParseService(Parent: TParent): TService;
+    function ParseRPC(Parent: TParent): TService.TRPCMethod;
 
   public
     constructor Create(_Tokenizer: TTokenizer);
@@ -859,9 +861,9 @@ begin
   while Token.Kind <> ttkCloseBrace do
   begin
     if Token.TokenString = 'enum' then
-      Enums.Add(ParseEnum(CreateParent(nil, Result, nil)))
+      Enums.Add(ParseEnum(CreateParent(nil, Result, nil, nil)))
     else if Token.TokenString = 'message' then
-      Messages.Add(Self.ParseMessage(CreateParent(nil, Result, Parent.Proto)))
+      Messages.Add(Self.ParseMessage(CreateParent(nil, Result, Parent.Proto, nil)))
     else if Token.TokenString = 'option' then
       Options.Add(ParseOption(ttkSemiColon))
     else if Token.TokenString = 'oneof' then
@@ -1145,7 +1147,7 @@ begin
   Tokenizer.Expect(ttkSemiColon);
 
   Result := TMessageField.Create(Name, FieldType, IsRepeated, FieldNumber,
-    Options, CreateParent(nil, ParentMessage, nil));
+    Options, CreateParent(nil, ParentMessage, nil, nil));
 
 end;
 
@@ -1289,6 +1291,82 @@ begin
 end;
 
 
+function TProto3Parser.ParseService(Parent: TParent): TService;
+(*
+service = "service" serviceName "{" { option | rpc | emptyStatement } "}"
+rpc = "rpc" rpcName "(" [ "stream" ] messageType ")" "returns" "(" [ "stream" ]
+messageType ")" (( "{" {option | emptyStatement } "}" ) | ";")begin
+*)
+var
+  Name: TIdentifier;
+  Options: TOptions;
+  Token: TToken;
+  RPCs: TService.TRPCMethods;
+
+begin
+  Name := ParseIdent;;
+  Tokenizer.Expect(ttkOpenBrace);
+  Token := Tokenizer.GetNextToken;
+
+  Options := TOptions.Create;
+  RPCs := TService.TRPCMethods.Create;
+
+  Result := TService.Create(
+    Name,
+    Options,
+    RPCs,
+    CreateParent(nil, nil, Parent.Proto, nil));
+
+  while Token.Kind <> ttkCloseBrace do
+  begin
+    if Token.TokenString = 'option' then
+    begin
+      Options.Add(ParseOption(ttkSemiColon))
+    end
+    else if Token.TokenString = 'rpc' then
+    begin
+      RPCs.Add(ParseRPC(CreateParent(nil, nil, nil, Result)));
+
+    end
+    else if Token.TokenString = ';' then
+    begin
+
+    end
+    else
+      raise EInvalidToken.Create(Token.TokenString, Token.Kind);
+
+    Token := Tokenizer.GetNextToken;
+  end;
+
+
+end;
+
+function TProto3Parser.ParseRPC(Parent: TParent): TService.TRPCMethod;
+var
+  InputMessage, OutputMessage: TFullIdentifier;
+  Name: ansiString;
+
+begin
+  Name := ParseIdent;;
+  Tokenizer.Expect(ttkOpenPar);
+
+  InputMessage := ParseFullIdent;
+  if InputMessage = 'stream' then
+    raise ENotImplementedYet.Create('Handling [stream] in rpc is not Implemented Yet!');
+  Tokenizer.Expect(ttkClosePar);
+  Tokenizer.Expect('returns');
+  Tokenizer.Expect(ttkOpenPar);
+  OutputMessage := ParseFullIdent;
+  if OutputMessage = 'stream' then
+    raise ENotImplementedYet.Create('Handling [stream] in rpc is not Implemented Yet!');
+  Tokenizer.Expect(ttkClosePar);
+  Tokenizer.Expect(ttkSemiColon);
+
+  Result := TService.TRPCMethod.Create(Name, InputMessage, OutputMessage);
+
+end;
+
+
 constructor TProto3Parser.Create(_Tokenizer: TTokenizer);
 begin
   inherited Create(_Tokenizer);
@@ -1309,6 +1387,7 @@ var
   Options: TOptions;
   Messages: TMessages;
   Enums: TEnums;
+  Services: TServices;
 
 // syntax { import | package | option | topLevelDef | emptyStatement }
 // topLevelDef = message | enum | service
@@ -1320,8 +1399,15 @@ begin
   Options := TOptions.Create;
   Messages := TMessages.Create;
   Enums := TEnums.Create;
+  Services := TServices.Create;
 
-  Result := TProto3.Create(Imports, Options, Messages, Enums, OtherParams);
+  Result := TProto3.Create(
+    Imports,
+    Options,
+    Messages,
+    Enums,
+    Services,
+    OtherParams);
 
   OtherParams.Add('syntax:3');
   OtherParams.Add('InputProtoFilename:'+ InputFilename);
@@ -1336,11 +1422,11 @@ begin
     else if Token.TokenString = 'option' then
       Options.Add(ParseOption(ttkSemiColon))
     else if Token.TokenString = 'message' then
-      Messages.Add(ParseMessage(CreateParent(nil, nil, Result)))
+      Messages.Add(ParseMessage(CreateParent(nil, nil, Result, nil)))
     else if Token.TokenString = 'enum' then
-      Enums.Add(ParseEnum(CreateParent(nil, nil, Result)))
+      Enums.Add(ParseEnum(CreateParent(nil, nil, Result, nil)))
     else if Token.TokenString = 'service' then
-      raise ENotImplementedYet.Create('Service is not supported yet!')
+      Services.Add(ParseService(CreateParent(nil, nil, Result, nil)))
     else
       raise Exception.Create(Format('Invalid token: %s', [Token.TokenString]));
     Token := Tokenizer.GetNextToken;

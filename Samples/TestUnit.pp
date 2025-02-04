@@ -117,8 +117,6 @@ type
       procedure Clear; override;
 
     public // functions
-      function DeepCopy: TA;
-
     end;
 
   public type
@@ -147,8 +145,6 @@ type
       procedure Clear; override;
 
     public // functions
-      function DeepCopy: TSubMessage;
-
     end;
 
   public type
@@ -755,8 +751,6 @@ type
     procedure Clear; override;
 
   public // functions
-    function DeepCopy: TMyMessage;
-
   end;
 
 
@@ -1256,18 +1250,6 @@ begin
 
 end;
 
-function TMyMessage.TA.DeepCopy: TMyMessage.TA;
-begin
-  if Self = nil then
-    Exit(nil);
-
-  Result := TMyMessage.TA.Create;
-
-  Result.AId := Self.AId;
-  Result.ASubMessage := Self.ASubMessage.DeepCopy;
-
-
-end;
 
 function TMyMessage.TSubMessage.GetId: Int32;
 begin
@@ -1329,19 +1311,9 @@ begin
 
 end;
 
-function TMyMessage.TSubMessage.DeepCopy: TMyMessage.TSubMessage;
-begin
-  if Self = nil then
-    Exit(nil);
-
-  Result := TMyMessage.TSubMessage.Create;
-
-  Result.Id := Self.Id;
-
-end;
 
 
-function TMyMessage.TInt32ToAMap.LoadFromStream(Stream: TProtoStreamReader): Boolean;
+function TInt32ToAMap.LoadFromStream(Stream: TProtoStreamReader): Boolean;
 var
   StartPos, Len, f, w, fs: Integer;
   Key: Int32;
@@ -1386,9 +1358,9 @@ begin
   Result := StartPos + Len = Stream.Position;
 end;
 
-procedure TMyMessage.TInt32ToAMap.SaveToStream(Stream: TProtoStreamWriter);
+procedure TInt32ToAMap.SaveToStream(Stream: TProtoStreamWriter);
 var
-  it: TMyMessage.TInt32ToAMap.TPairEnumerator;
+  it: TInt32ToAMap.TPairEnumerator;
   SizeNode: TLinkListNode;
 
 begin
@@ -1411,7 +1383,7 @@ end;
 
 
 
-function TMyMessage.TInt32ToSubMessageMap.LoadFromStream(Stream: TProtoStreamReader): Boolean;
+function TInt32ToSubMessageMap.LoadFromStream(Stream: TProtoStreamReader): Boolean;
 var
   StartPos, Len, f, w, fs: Integer;
   Key: Int32;
@@ -1456,9 +1428,9 @@ begin
   Result := StartPos + Len = Stream.Position;
 end;
 
-procedure TMyMessage.TInt32ToSubMessageMap.SaveToStream(Stream: TProtoStreamWriter);
+procedure TInt32ToSubMessageMap.SaveToStream(Stream: TProtoStreamWriter);
 var
-  it: TMyMessage.TInt32ToSubMessageMap.TPairEnumerator;
+  it: TInt32ToSubMessageMap.TPairEnumerator;
   SizeNode: TLinkListNode;
 
 begin
@@ -1481,7 +1453,7 @@ end;
 
 
 
-function TMyMessage.TInt32ToInt32Map.LoadFromStream(Stream: TProtoStreamReader): Boolean;
+function TInt32ToInt32Map.LoadFromStream(Stream: TProtoStreamReader): Boolean;
 var
   StartPos, Len, f, w, fs: Integer;
   Key: Int32;
@@ -1520,9 +1492,9 @@ begin
   Result := StartPos + Len = Stream.Position;
 end;
 
-procedure TMyMessage.TInt32ToInt32Map.SaveToStream(Stream: TProtoStreamWriter);
+procedure TInt32ToInt32Map.SaveToStream(Stream: TProtoStreamWriter);
 var
-  it: TMyMessage.TInt32ToInt32Map.TPairEnumerator;
+  it: TInt32ToInt32Map.TPairEnumerator;
   SizeNode: TLinkListNode;
 
 begin
@@ -2661,144 +2633,6 @@ begin
 
 end;
 
-function TMyMessage.DeepCopy: TMyMessage;
-var
-  itIdAMap: TInt32ToAMap.TTreePair;
-  itIdSubMessageMap: TInt32ToSubMessageMap.TTreePair;
-  itAnIntIntMap: TInt32ToInt32Map.TTreePair;
-  itBIntIntMap: TInt32ToInt32Map.TTreePair;
-
-begin
-  if Self = nil then
-    Exit(nil);
-
-  Result := TMyMessage.Create;
-
-  Result.A := Self.A.DeepCopy;
-
-  if Self.GetIdAMap <> nil then
-  begin
-    for itIdAMap in Self.GetIdAMap do
-    begin
-      Result.MutableIdAMap.Add(itIdAMap.Key, itIdAMap.Value.DeepCopy());
-
-    end;
-  end;
-  if Self.ConstMyOneOf <> nil then
-  begin
-    if Int32(Self.MyOneOf.GetAnEnum) <> 0 then
-    begin
-      Result.MutableMyOneOf.AnEnum := Self.FMyOneOf.GetAnEnum;
-
-    end;
-
-    if Int32(Self.MyOneOf.GetDeptestAnEnum) <> 0 then
-    begin
-      Result.MutableMyOneOf.DeptestAnEnum := Self.FMyOneOf.GetDeptestAnEnum;
-
-    end;
-
-    Result.MutableMyOneOf.IsCountry := Self.MyOneOf.IsCountry;
-    Result.MutableMyOneOf.IsState := Self.MyOneOf.IsState;
-    Result.MutableMyOneOf.IsCounty := Self.MyOneOf.IsCounty;
-    Result.MutableMyOneOf.IsCity := Self.MyOneOf.IsCity;
-    Result.MutableMyOneOf.IsStreet := Self.MyOneOf.IsStreet;
-    Result.MutableMyOneOf.IsStr := Self.MyOneOf.IsStr;
-    Result.MutableMyOneOf.IsI := Self.MyOneOf.IsI;
-    Result.MutableMyOneOf.IsF := Self.MyOneOf.IsF;
-    Result.MutableMyOneOf.IsD := Self.MyOneOf.IsD;
-    Result.MutableMyOneOf.IsA := Self.MyOneOf.GetIsA.DeepCopy;
-
-    Result.MutableMyOneOf.IsB := Self.MyOneOf.IsB;
-
-  end;
-
-  Result.FRepStr := Self.RepStr.DeepCopy;
-
-  Result.FRepI := Self.RepI.DeepCopy;
-
-  Result.FRefF := Self.RefF.DeepCopy;
-
-  Result.FRepD := Self.RepD.DeepCopy;
-
-  Result.FRepA := Self.RepA.DeepCopy;
-
-  Result.Dd := Self.Dd;
-  Result.F := Self.F;
-  Result.I32 := Self.I32;
-  Result.I64 := Self.I64;
-  Result.Ui32 := Self.Ui32;
-  Result.Ui64 := Self.Ui64;
-  Result.Si32 := Self.Si32;
-  Result.Si64 := Self.Si64;
-  Result.F32 := Self.F32;
-  Result.F64 := Self.F64;
-  Result.S32 := Self.S32;
-  Result.S64 := Self.S64;
-  Result.B := Self.B;
-  Result.AnS := Self.AnS;
-  Result.FRdd := Self.Rdd.DeepCopy;
-
-  Result.FRf := Self.Rf.DeepCopy;
-
-  Result.FRi32 := Self.Ri32.DeepCopy;
-
-  Result.FRi64 := Self.Ri64.DeepCopy;
-
-  Result.FRui32 := Self.Rui32.DeepCopy;
-
-  Result.FRui64 := Self.Rui64.DeepCopy;
-
-  Result.FRsi32 := Self.Rsi32.DeepCopy;
-
-  Result.FRsi64 := Self.Rsi64.DeepCopy;
-
-  Result.FRf32 := Self.Rf32.DeepCopy;
-
-  Result.FRf64 := Self.Rf64.DeepCopy;
-
-  Result.FRs32 := Self.Rs32.DeepCopy;
-
-  Result.FRs64 := Self.Rs64.DeepCopy;
-
-  Result.FRb := Self.Rb.DeepCopy;
-
-  Result.FRs := Self.Rs.DeepCopy;
-
-        Result.FAenums := Self.Aenums.DeepCopy();
-
-  if Self.GetIdSubMessageMap <> nil then
-  begin
-    for itIdSubMessageMap in Self.GetIdSubMessageMap do
-    begin
-      Result.MutableIdSubMessageMap.Add(itIdSubMessageMap.Key, itIdSubMessageMap.Value.DeepCopy());
-
-    end;
-  end;
-  if Self.GetAnIntIntMap <> nil then
-  begin
-    for itAnIntIntMap in Self.GetAnIntIntMap do
-    begin
-      Result.MutableAnIntIntMap.Add(itAnIntIntMap.Key, itAnIntIntMap.Value);
-
-    end;
-  end;
-  if Self.GetBIntIntMap <> nil then
-  begin
-    for itBIntIntMap in Self.GetBIntIntMap do
-    begin
-      Result.MutableBIntIntMap.Add(itBIntIntMap.Key, itBIntIntMap.Value);
-
-    end;
-  end;
-  if Int32(Self.Aenum) <> 0 then
-  begin
-    Result.Aenum := Self.FAenum;
-
-  end;
-
-
-end;
 
 
 

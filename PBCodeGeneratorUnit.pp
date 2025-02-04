@@ -109,6 +109,10 @@ type
       const Context: TContext; const Indent: AnsiString);
     procedure GenerateCodeForMap(const Map: TMap; Unitcode: TUnitCode;
       const Indent: AnsiString);
+    procedure GenerateCodeForService(const AService: TService; Unitcode: TUnitCode;
+      const Indent: AnsiString);
+    procedure GenerateCodeForRPC(const aRPC: TService.TRPCMethod; Unitcode: TUnitCode;
+      const Indent: AnsiString);
 
     procedure GenerateCode; override;
 
@@ -131,9 +135,21 @@ begin
   Target += aText + #10;
 end;
 
+function EmptyContext: TPBCodeGeneratorV1.TContext;
+begin
+  FillChar(Result, 0, SizeOf(Result));
+
+end;
+
 function CreateContext(Msg: TMessage): TPBCodeGeneratorV1.TContext;
 begin
   Result.Message := Msg;
+
+end;
+
+function CreateContext(Proto: TProto): TPBCodeGeneratorV1.TContext;
+begin
+  Result.Proto := Proto;
 
 end;
 
@@ -482,9 +498,11 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
     // Unitcode.InterfaceCode.TypeList.Add(Format('%sfunction ToString: AnsiString; override;', [Indent + '  ']));
     Unitcode.InterfaceCode.TypeList.Add('');
     Unitcode.InterfaceCode.TypeList.Add('%spublic // functions', [Indent]);
+    {
     Unitcode.InterfaceCode.TypeList.Add('%s  function DeepCopy: %s;',
       [Indent, GetFPCType(aMessage.MessageType, CreateContext(aMessage.Parent.Message))]);
     Unitcode.InterfaceCode.TypeList.Add('');
+    }
     Unitcode.InterfaceCode.TypeList.Add(Format('%send;', [Indent]));
     Unitcode.InterfaceCode.TypeList.Add('');
 
@@ -497,7 +515,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       MessageClassName: AnsiString;
 
     begin
-      MessageClassName := GetFPCType(aMessage.MessageType, CreateContext(nil));
+      MessageClassName := GetFPCType(aMessage.MessageType, CreateContext(TMessage(nil)));
 
       Unitcode.ImplementationCode.Methods.Add(Format('constructor %s.Create;', [MessageClassName]));
       Unitcode.ImplementationCode.Methods.Add('begin');
@@ -512,7 +530,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       MessageClassName: AnsiString;
 
     begin
-      MessageClassName := GetFPCType(aMessage.MessageType, CreateContext(nil));
+      MessageClassName := GetFPCType(aMessage.MessageType, EmptyContext);
 
       Unitcode.ImplementationCode.Methods.Add(Format('destructor %s.Destroy;', [MessageClassName]));
       Unitcode.ImplementationCode.Methods.Add('begin');
@@ -530,7 +548,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       MessageClassName: AnsiString;
 
     begin
-      MessageClassName := GetFPCType(aMessage.MessageType, CreateContext(nil));
+      MessageClassName := GetFPCType(aMessage.MessageType, EmptyContext);
 
       Unitcode.ImplementationCode.Methods.Add(Format('procedure %s.Clear;', [MessageClassName]));
       Unitcode.ImplementationCode.Methods.Add('begin');
@@ -669,7 +687,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       Unitcode.ImplementationCode.Methods.Add(
         Format(
           'procedure %s.SaveToStream(Stream: TProtoStreamWriter);',
-           [GetFPCType(aMessage.MessageType, CreateContext(nil))]));
+           [GetFPCType(aMessage.MessageType, EmptyContext)]));
 
       VarParts := TStringList.Create;
       for Field in aMessage.Fields do
@@ -848,7 +866,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
 
     begin
       Unitcode.ImplementationCode.Methods.Add(Format('function %s.LoadFromStream(Stream: TProtoStreamReader; Len: Integer): Boolean;',
-        [GetFPCType(aMessage.MessageType, CreateContext(nil))]));
+        [GetFPCType(aMessage.MessageType, EmptyContext)]));
       Unitcode.ImplementationCode.Methods.Add('var');
       Unitcode.ImplementationCode.Methods.Add('  StartPos, FieldNumber, WireType: Integer;'+ sLineBreak);
 
@@ -873,6 +891,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
 
     end;
 
+    {
     procedure GenerateDeepCopy;
 
       procedure GenerateForOneOf(OneOf: TOneOf; Indent: AnsiString); forward;
@@ -1004,8 +1023,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       HasMap: Boolean;
     begin
       Unitcode.ImplementationCode.Methods.Add(Format('function %s.DeepCopy: %s;',
-        [GetFPCType(aMessage.MessageType, CreateContext(nil)),
-         GetFPCType(aMessage.MessageType, CreateContext(nil))]));
+        [GetFPCType(aMessage.MessageType, EmptyContext),
+         GetFPCType(aMessage.MessageType, EmptyContext)]));
       HasMap := False;
       for Field in aMessage.Fields do
         if (not Field.FieldType.IsRepeated) and (Field.ClassType = TMap) then
@@ -1028,7 +1047,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       Unitcode.ImplementationCode.Methods.Add('  if Self = nil then');
       Unitcode.ImplementationCode.Methods.Add('    Exit(nil);' + sLineBreak);
       Unitcode.ImplementationCode.Methods.Add(Format('  Result := %s.Create;',
-        [GetFPCType(aMessage.MessageType, CreateContext(nil))]));
+        [GetFPCType(aMessage.MessageType, EmptyContext)]));
       Unitcode.ImplementationCode.Methods.Add('');
       for Field in aMessage.Fields do
         GenerateForField(Field, '  ');
@@ -1036,6 +1055,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       Unitcode.ImplementationCode.Methods.Add('end;');
 
     end;
+    }
 
     begin
       GenerateConstructors;
@@ -1050,7 +1070,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       Unitcode.ImplementationCode.Methods.Add('');
       GenerateLoadFromStream;
       Unitcode.ImplementationCode.Methods.Add('');
-      GenerateDeepCopy;
+      // GenerateDeepCopy;
       Unitcode.ImplementationCode.Methods.Add('');
   end;
 
@@ -1073,7 +1093,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
     Result := StringReplace(
       Result,
       '[[Field.FullFPCType]]',
-      GetFPCType(aField.FieldType, CreateContext(nil)),
+      GetFPCType(aField.FieldType, EmptyContext),
       [rfReplaceAll]);
     Result := StringReplace(
       Result,
@@ -1093,7 +1113,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessageField(
       [rfReplaceAll]);
     Result := StringReplace(Result,
       '[[Field.ClassName]]',
-      GetFPCType(aField.FieldType.Parent.Message.MessageType, CreateContext(nil)),
+      GetFPCType(aField.FieldType.Parent.Message.MessageType, EmptyContext),
       [rfReplaceAll]);
     if aField.FieldType.IsRepeated then
     begin
@@ -1189,7 +1209,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForOneOf(const OneOf: TOneOf;
     PtrType: AnsiString;
 
   begin
-    OneOfClassName := GetFPCType(OneOf.OneOfFieldPBType, CreateContext(nil));
+    OneOfClassName := GetFPCType(OneOf.OneOfFieldPBType, EmptyContext);
 
     for i := 0 to OneOf.Fields.Count - 1 do
     begin
@@ -1242,7 +1262,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForOneOf(const OneOf: TOneOf;
                  '  begin' + sLineBreak +
                  '    Exit;' + sLineBreak +
                  '  end;' + sLineBreak, [Canonicalize(Field.Name),
-                 Self.GetDefaultValue(Field.FieldType, CreateContext(nil))]));
+                 Self.GetDefaultValue(Field.FieldType, EmptyContext)]));
       if IsSimpleType(Field.FieldType) then
       begin
         Unitcode.ImplementationCode.Methods.Add('  PData := new(%s);',
@@ -1353,7 +1373,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMap(const Map: TMap;
     MapClassName: AnsiString;
 
   begin
-    MapClassName := GetFPCType(Map.MapFieldPBType, CreateContext(nil));
+    MapClassName := GetFPCType(Map.MapFieldPBType, EmptyContext);
 
     Unitcode.ImplementationCode.Methods.Add('');
     Unitcode.ImplementationCode.Methods.Add(Format('function %s.LoadFromStream(Stream: TProtoStreamReader): Boolean;', [MapClassName]));
@@ -1450,6 +1470,73 @@ begin
 
 end;
 
+// Work In Progress
+procedure TPBCodeGeneratorV1.GenerateCodeForService(const AService: TService;
+  Unitcode: TUnitCode; const Indent: AnsiString);
+
+  procedure GenerateDeclarationForService(const AService: TService; InterfaceCode: TUnitCode.TInterface);
+    procedure GenerateDeclarationForClientClass(const AService: TService; InterfaceCode: TUnitCode.TInterface);
+    var
+      i: Integer;
+      rpc: TService.TRPCMethod;
+      Enum: TEnum;
+      Option: TOption;
+      ServiceClassName: AnsiString;
+      AllMaps: TStringList;
+
+    begin
+      ServiceClassName := GetFPCType(
+        AService.ServiceType,
+        CreateContext(Self.Proto)
+      );
+      Unitcode.InterfaceCode.TypeList.Add(Format('%s// Client For Service %s', [Indent, AService.Name]));
+      Unitcode.InterfaceCode.TypeList.Add(Format('%s{ %sClient }', [Indent, ServiceClassName]));
+      Unitcode.InterfaceCode.TypeList.Add(Format('%s%s = class(TGRPCClient)',
+        [Indent, ServiceClassName]));
+      for Option in AService.Options do
+        Unitcode.InterfaceCode.TypeList.Add(Format('%s// %s = %s', [
+        Indent + '  ', Option.OptionName, Option.ConstValue]));
+
+      for rpc in AService.RPCS do
+      begin
+        Unitcode.InterfaceCode.TypeList.Add(
+          '%s  function %s(Request: %s): %s;',
+          [
+            Indent,
+            rpc.Name,
+            'T' + rpc.Input,
+            'T' + rpc.Output
+            ]);
+
+
+      end;
+
+      Unitcode.InterfaceCode.TypeList.Add(Format('%send', [Indent]));
+    end;
+
+  begin
+    GenerateDeclarationForClientClass(AService, InterfaceCode);
+
+  end;
+
+  procedure GenerateImplementationForService(const AService: TService; ImplementationCode: TUnitCode.TImplementation);
+  begin
+
+  end;
+
+begin
+  GenerateDeclarationForService(AService, Unitcode.InterfaceCode);
+  GenerateImplementationForService(AService, Unitcode.ImplementationCode);
+
+end;
+
+procedure TPBCodeGeneratorV1.GenerateCodeForRPC(
+  const aRPC: TService.TRPCMethod; Unitcode: TUnitCode; const Indent: AnsiString
+  );
+begin
+
+end;
+
 function TPBCodeGeneratorV1.GetFPCType(PBType: TPBBaseType; Context: TContext
   ): AnsiString;
 
@@ -1462,6 +1549,12 @@ function TPBCodeGeneratorV1.GetFPCType(PBType: TPBBaseType; Context: TContext
   function GetMessageClassName(aMessage: TMessagePBType): AnsiString;
   begin
     Result := Format('T%s', [Canonicalize(aMessage.Name)]);
+
+  end;
+
+  function GetServiceClassName(aService: TServicePBType): AnsiString;
+  begin
+    Result := Format('T%s', [Canonicalize(aService.Name)]);
 
   end;
 
@@ -1537,6 +1630,7 @@ var
   UnitCode: TUnitCode;
   Enum: TEnum;
   Message: TMessage;
+  Service: TService;
   Code: AnsiString;
 
 begin
@@ -1545,17 +1639,25 @@ begin
   GenerateCodeForImports(Proto.Imports, UnitCode, '', '');
 
   for Enum in Proto.Enums do
-    GenerateCodeForEnum(Enum, UnitCode, CreateContext(nil), '  ');
+    GenerateCodeForEnum(Enum, UnitCode, EmptyContext, '  ');
 
   for Message in Proto.Messages do
     UnitCode.InterfaceCode.TypeList.Add(
      Format('%s%s = class;', ['  ',
-       GetFPCType(Message.MessageType, CreateContext(nil))]));
+       GetFPCType(Message.MessageType, EmptyContext)]));
+
+  for Service in Proto.Services do
+    UnitCode.InterfaceCode.TypeList.Add(
+    Format('%s%s = class;', ['  ',
+      GetFPCType(Service.ServiceType, EmptyContext)]));
 
   UnitCode.InterfaceCode.TypeList.Add('');
 
   for Message in Proto.Messages do
     GenerateCodeForMessage(Message, UnitCode, '  ');
+
+  for Service in Proto.Services do
+    GenerateCodeForService(Service, UnitCode, '  ');
 
   OutputStream := TFileStream.Create(ConcatPaths([ExtractFileDir(Proto.InputProtoFilename),
     GetUnitName(Proto.InputProtoFilename) + '.pp']), fmCreate);

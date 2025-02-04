@@ -103,8 +103,8 @@ end;
 function IsOneOfType(MessageField: TMessageField; FieldProto: TProto;
   RelatedProtos: TProtos): Boolean;
 begin
-  if MessageField is TOneOf then
-    Exit;
+  Result := MessageField is TOneOf;
+
 end;
 
 function GetTypeSize(TypeName: AnsiString): Integer;
