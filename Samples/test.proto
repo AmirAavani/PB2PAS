@@ -3,7 +3,7 @@ syntax = "proto3";
 package test;
 option go_package = "./Samples";
 
-import "test_dep1.proto";
+import "Samples/test_dep1.proto";
 
 message MyMessage {
   message A {

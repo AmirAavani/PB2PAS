@@ -783,20 +783,20 @@ end;
 
 class function TBaseProtoParser.ParseAll(_InputFilename: AnsiString): TProtoMap;
 
-  procedure RecParse(FilePath, ProtoFile: AnsiString; ProtoMap: TProtoMap);
+  procedure RecParse(ProtoFile: AnsiString; ProtoMap: TProtoMap);
   var
     Proto: TProto;
     Import: AnsiString;
 
   begin
-    ALoggerUnit.GetLogger.FMTDebugLn('Parsing %s', [JoinPath(FilePath, ProtoFile)]);
+    ALoggerUnit.GetLogger.FMTDebugLn('Parsing %s', [ProtoFile]);
 
-    Proto := TBaseProtoParser.Parse(JoinPath(FilePath, ProtoFile));
-    ProtoMap.Add(JoinPath(FilePath, ProtoFile), Proto);
+    Proto := TBaseProtoParser.Parse(ProtoFile);
+    ProtoMap.Add(ProtoFile, Proto);
 
     for Import in Proto.Imports do
-      if ProtoMap.Find(JoinPath(FilePath, Import)) = nil then
-        RecParse(FilePath, Import, ProtoMap);
+      if ProtoMap.Find(Import) = nil then
+        RecParse(Import, ProtoMap);
   end;
 
 var
@@ -808,7 +808,7 @@ begin
   if not IsPrefix('./', _InputFilename) and not IsPrefix('/', _InputFilename) then
     Filename := './' + _InputFilename;
 
-  RecParse(ExtractFilePath(Filename), ExtractFileName(Filename), Result);
+  RecParse(Filename, Result);
 
 end;
 

@@ -757,7 +757,7 @@ type
 
 implementation
 
-function TMyMessage.TMyOneOf.GetAnEnum: TAnEnum;
+function TMyOneOf.GetAnEnum: TAnEnum;
 begin
   if Self.GetPointerByIndex(0) = nil then
   begin
@@ -769,7 +769,7 @@ begin
 
 end;
 
-procedure TMyMessage.TMyOneOf.SetAnEnum(_AnEnum: TAnEnum);
+procedure TMyOneOf.SetAnEnum(_AnEnum: TAnEnum);
 var
   PData: PInt32;
 
@@ -785,7 +785,7 @@ begin
 
 end;
 
-function TMyMessage.TMyOneOf.GetDeptestAnEnum: TestDep1Unit.TAnEnum;
+function TMyOneOf.GetDeptestAnEnum: TestDep1Unit.TAnEnum;
 begin
   if Self.GetPointerByIndex(1) = nil then
   begin
@@ -797,7 +797,7 @@ begin
 
 end;
 
-procedure TMyMessage.TMyOneOf.SetDeptestAnEnum(_DeptestAnEnum: TestDep1Unit.TAnEnum);
+procedure TMyOneOf.SetDeptestAnEnum(_DeptestAnEnum: TestDep1Unit.TAnEnum);
 var
   PData: PInt32;
 
@@ -813,7 +813,7 @@ begin
 
 end;
 
-function TMyMessage.TMyOneOf.GetIsCountry: AnsiString;
+function TMyOneOf.GetIsCountry: AnsiString;
 begin
   if Self.GetPointerByIndex(2) = nil then
   begin
@@ -825,7 +825,7 @@ begin
 
 end;
 
-procedure TMyMessage.TMyOneOf.SetIsCountry(_IsCountry: AnsiString);
+procedure TMyOneOf.SetIsCountry(_IsCountry: AnsiString);
 var
   PData: PAnsiString;
 
@@ -841,7 +841,7 @@ begin
 
 end;
 
-function TMyMessage.TMyOneOf.GetIsState: AnsiString;
+function TMyOneOf.GetIsState: AnsiString;
 begin
   if Self.GetPointerByIndex(3) = nil then
   begin
@@ -853,7 +853,7 @@ begin
 
 end;
 
-procedure TMyMessage.TMyOneOf.SetIsState(_IsState: AnsiString);
+procedure TMyOneOf.SetIsState(_IsState: AnsiString);
 var
   PData: PAnsiString;
 
@@ -869,7 +869,7 @@ begin
 
 end;
 
-function TMyMessage.TMyOneOf.GetIsCounty: AnsiString;
+function TMyOneOf.GetIsCounty: AnsiString;
 begin
   if Self.GetPointerByIndex(4) = nil then
   begin
@@ -881,7 +881,7 @@ begin
 
 end;
 
-procedure TMyMessage.TMyOneOf.SetIsCounty(_IsCounty: AnsiString);
+procedure TMyOneOf.SetIsCounty(_IsCounty: AnsiString);
 var
   PData: PAnsiString;
 
@@ -897,7 +897,7 @@ begin
 
 end;
 
-function TMyMessage.TMyOneOf.GetIsCity: AnsiString;
+function TMyOneOf.GetIsCity: AnsiString;
 begin
   if Self.GetPointerByIndex(5) = nil then
   begin
@@ -909,7 +909,7 @@ begin
 
 end;
 
-procedure TMyMessage.TMyOneOf.SetIsCity(_IsCity: AnsiString);
+procedure TMyOneOf.SetIsCity(_IsCity: AnsiString);
 var
   PData: PAnsiString;
 
@@ -925,7 +925,7 @@ begin
 
 end;
 
-function TMyMessage.TMyOneOf.GetIsStreet: AnsiString;
+function TMyOneOf.GetIsStreet: AnsiString;
 begin
   if Self.GetPointerByIndex(6) = nil then
   begin
@@ -937,7 +937,7 @@ begin
 
 end;
 
-procedure TMyMessage.TMyOneOf.SetIsStreet(_IsStreet: AnsiString);
+procedure TMyOneOf.SetIsStreet(_IsStreet: AnsiString);
 var
   PData: PAnsiString;
 
@@ -953,7 +953,7 @@ begin
 
 end;
 
-function TMyMessage.TMyOneOf.GetIsStr: AnsiString;
+function TMyOneOf.GetIsStr: AnsiString;
 begin
   if Self.GetPointerByIndex(7) = nil then
   begin
@@ -965,7 +965,7 @@ begin
 
 end;
 
-procedure TMyMessage.TMyOneOf.SetIsStr(_IsStr: AnsiString);
+procedure TMyOneOf.SetIsStr(_IsStr: AnsiString);
 var
   PData: PAnsiString;
 
@@ -981,7 +981,7 @@ begin
 
 end;
 
-function TMyMessage.TMyOneOf.GetIsI: Int32;
+function TMyOneOf.GetIsI: Int32;
 begin
   if Self.GetPointerByIndex(8) = nil then
   begin
@@ -993,7 +993,7 @@ begin
 
 end;
 
-procedure TMyMessage.TMyOneOf.SetIsI(_IsI: Int32);
+procedure TMyOneOf.SetIsI(_IsI: Int32);
 var
   PData: PInt32;
 
@@ -1009,7 +1009,7 @@ begin
 
 end;
 
-function TMyMessage.TMyOneOf.GetIsF: Single;
+function TMyOneOf.GetIsF: Single;
 begin
   if Self.GetPointerByIndex(9) = nil then
   begin
@@ -1021,7 +1021,7 @@ begin
 
 end;
 
-procedure TMyMessage.TMyOneOf.SetIsF(_IsF: Single);
+procedure TMyOneOf.SetIsF(_IsF: Single);
 var
   PData: PSingle;
 
@@ -1037,7 +1037,7 @@ begin
 
 end;
 
-function TMyMessage.TMyOneOf.GetIsD: Double;
+function TMyOneOf.GetIsD: Double;
 begin
   if Self.GetPointerByIndex(10) = nil then
   begin
@@ -1049,7 +1049,7 @@ begin
 
 end;
 
-procedure TMyMessage.TMyOneOf.SetIsD(_IsD: Double);
+procedure TMyOneOf.SetIsD(_IsD: Double);
 var
   PData: PDouble;
 
@@ -1065,7 +1065,7 @@ begin
 
 end;
 
-function TMyMessage.TMyOneOf.GetIsA: TA;
+function TMyOneOf.GetIsA: TA;
 begin
   if Self.GetPointerByIndex(11) = nil then
   begin
@@ -1077,7 +1077,7 @@ begin
 
 end;
 
-procedure TMyMessage.TMyOneOf.SetIsA(_IsA: TA);
+procedure TMyOneOf.SetIsA(_IsA: TA);
 begin
   if _IsA = nil then
   begin
@@ -1088,7 +1088,7 @@ begin
 
 end;
 
-function TMyMessage.TMyOneOf.GetIsB: Boolean;
+function TMyOneOf.GetIsB: Boolean;
 begin
   if Self.GetPointerByIndex(12) = nil then
   begin
@@ -1100,7 +1100,7 @@ begin
 
 end;
 
-procedure TMyMessage.TMyOneOf.SetIsB(_IsB: Boolean);
+procedure TMyOneOf.SetIsB(_IsB: Boolean);
 var
   PData: PBoolean;
 
@@ -1117,13 +1117,13 @@ begin
 end;
 
 
-constructor TMyMessage.TMyOneOf.Create;
+constructor TMyOneOf.Create;
 begin
   inherited Create;
 
 end;
 
-destructor TMyMessage.TMyOneOf.Destroy;
+destructor TMyOneOf.Destroy;
 begin
   Clear;
 
@@ -1132,7 +1132,7 @@ begin
 
 end;
 
-procedure TMyMessage.TMyOneOf.Clear;
+procedure TMyOneOf.Clear;
 begin
   if Self = nil then
   begin
@@ -1198,21 +1198,21 @@ begin
 end;
 
 
-destructor TMyMessage.TA.Destroy;
+destructor TA.Destroy;
 begin
   Self.Clear;
 
   inherited;
 end;
 
-procedure TMyMessage.TA.Clear;
+procedure TA.Clear;
 begin
   FreeAndNil(FASubMessage);
 
   inherited;
 end;
 
-procedure TMyMessage.TA.SaveToStream(Stream: TProtoStreamWriter);
+procedure TA.SaveToStream(Stream: TProtoStreamWriter);
 begin
     SaveInt32(Stream, AId, 1);
 
@@ -1221,7 +1221,7 @@ begin
 end;
 
 
-function TMyMessage.TA.LoadFromStream(Stream: TProtoStreamReader; Len: Integer): Boolean;
+function TA.LoadFromStream(Stream: TProtoStreamReader; Len: Integer): Boolean;
 var
   StartPos, FieldNumber, WireType: Integer;
 
@@ -1269,27 +1269,27 @@ begin
 end;
 
 
-destructor TMyMessage.TSubMessage.Destroy;
+destructor TSubMessage.Destroy;
 begin
   Self.Clear;
 
   inherited;
 end;
 
-procedure TMyMessage.TSubMessage.Clear;
+procedure TSubMessage.Clear;
 begin
 
   inherited;
 end;
 
-procedure TMyMessage.TSubMessage.SaveToStream(Stream: TProtoStreamWriter);
+procedure TSubMessage.SaveToStream(Stream: TProtoStreamWriter);
 begin
     SaveInt32(Stream, Id, 1);
 
 end;
 
 
-function TMyMessage.TSubMessage.LoadFromStream(Stream: TProtoStreamReader; Len: Integer): Boolean;
+function TSubMessage.LoadFromStream(Stream: TProtoStreamReader; Len: Integer): Boolean;
 var
   StartPos, FieldNumber, WireType: Integer;
 
