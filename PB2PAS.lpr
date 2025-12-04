@@ -2,8 +2,8 @@ program PB2PAS;
 
 {$mode objfpc}{$H+}
 uses
-  cthreads, PBParserUnit, PBDefinitionUnit, ALoggerUnit, ParamsUnit, ParamManagerUnit,
-  PBCodeGeneratorUnit;
+  cthreads, PBParserUnit, PBDefinitionUnit, ALoggerUnit, ParamsUnit,
+  PBCodeGeneratorUnit, ListUnit, ParamManagerUnit;
 
 var
   Params: TParam;

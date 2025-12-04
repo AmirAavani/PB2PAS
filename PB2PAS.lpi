@@ -23,7 +23,7 @@
     <RunParams>
       <FormatVersion Value="2"/>
     </RunParams>
-    <Units Count="19">
+    <Units Count="20">
       <Unit0>
         <Filename Value="PB2PAS.lpr"/>
         <IsPartOfProject Value="True"/>
@@ -100,6 +100,10 @@
         <Filename Value="ParamsUnit.pp"/>
         <IsPartOfProject Value="True"/>
       </Unit18>
+      <Unit19>
+        <Filename Value="ListUnit.pp"/>
+        <IsPartOfProject Value="True"/>
+      </Unit19>
     </Units>
   </ProjectOptions>
   <CompilerOptions>

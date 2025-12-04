@@ -795,7 +795,7 @@ class function TBaseProtoParser.ParseAll(_InputFilename: AnsiString): TProtoMap;
     ProtoMap.Add(ProtoFile, Proto);
 
     for Import in Proto.Imports do
-      if ProtoMap.Find(Import) = nil then
+      if ProtoMap.ContainsKey(Import) then
         RecParse(Import, ProtoMap);
   end;
 

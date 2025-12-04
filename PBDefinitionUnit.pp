@@ -5,8 +5,7 @@ unit PBDefinitionUnit;
 interface
 
 uses
-  PBOptionUnit, Classes, SysUtils, Generics.Collections,
-  NamedObjectListUnit, GenericCollectionUnit;
+  PBOptionUnit, Classes, SysUtils, Generics.Collections, ListUnit;
 
 type
   TIntList = specialize TList<Integer>;
@@ -95,7 +94,7 @@ type
 
   end;
 
-  TPBBaseTypes = specialize TObjectCollection<TPBBaseType>;
+  TPBBaseTypes = specialize TList<TPBBaseType>;
 
   { TPBTypeWithFields }
 
@@ -163,7 +162,7 @@ type
     function ToXML: AnsiString; virtual;
   end;
 
-  TMessageFields = specialize TNamedObjectList<TMessageField>;
+  TMessageFields = specialize TObjectList<TMessageField>;
 
   { TEnumField }
 
@@ -188,7 +187,7 @@ type
 
   end;
 
-  TEnumFields = specialize TNamedObjectList<TEnumField>;
+  TEnumFields = specialize TObjectList<TEnumField>;
 
   { TEnum }
 
@@ -206,7 +205,7 @@ type
     function ToXML: AnsiString; override;
   end;
 
-  TEnums = specialize TNamedObjectList<TEnum>;
+  TEnums = specialize TObjectList<TEnum>;
 
   { TServicePBType }
 
@@ -243,7 +242,7 @@ type
 
       function ToXML: AnsiString; override;
     end;
-    TRPCMethods = specialize TNamedObjectList<TRPCMethod>;
+    TRPCMethods = specialize TObjectList<TRPCMethod>;
 
   protected
     FRPCS: TRPCMethods;
@@ -267,7 +266,7 @@ type
 
   end;
 
-  TServices = specialize TNamedObjectList<TService>;
+  TServices = specialize TObjectList<TService>;
 
   { TOneOfField }
 
@@ -344,7 +343,7 @@ type
   private
     MessagePBType: TMessagePBType;
     FFields: TMessageFields;
-    FMessages: specialize TNamedObjectList<TMessage>;
+    FMessages: specialize TObjectList<TMessage>;
     FOptions: TOptions;
     FEnums: TEnums;
     FName: AnsiString;
@@ -355,14 +354,14 @@ type
     property MessageType: TMessagePBType read MessagePBType;
     property Name: AnsiString read FName;
     property Fields: TMessageFields read FFields;
-    property Messages: specialize TNamedObjectList<TMessage> read FMessages;
+    property Messages: specialize TObjectList<TMessage> read FMessages;
     property Options: TOptions read FOptions;
     property Enums: TEnums read FEnums;
     property Parent: TParent read FParent;
 
     constructor Create(_Name: AnsiString;
       _Fields: TMessageFields;
-      _Messages: specialize TNamedObjectList<TMessage>;
+      _Messages: specialize TObjectList<TMessage>;
       _Options:  TOptions;
       _Enums:  TEnums;
       _Parent: TParent);
@@ -371,7 +370,7 @@ type
     function ToXML: AnsiString;
   end;
 
-  TMessages = specialize TNamedObjectList<TMessage>;
+  TMessages = specialize TObjectList<TMessage>;
 
   { TImports }
 
@@ -429,7 +428,7 @@ type
 
   TStrLit = AnsiString;
   TConstant = AnsiString;
-  TProtoMap = specialize TMapSimpleKeyObjectValue<AnsiString, TProto>;
+  TProtoMap = specialize TDictionary<AnsiString, TProto>;
 
 function CreateParent(
   anOneOf: TOneOf;
@@ -979,7 +978,7 @@ begin
 end;
 
 constructor TMessage.Create(_Name: AnsiString; _Fields: TMessageFields;
-  _Messages: specialize TNamedObjectList<TMessage>; _Options: TOptions;
+  _Messages: specialize TObjectList<TMessage>; _Options: TOptions;
   _Enums: TEnums; _Parent: TParent);
 var
   Field: TMessageField;
