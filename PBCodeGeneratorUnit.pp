@@ -882,6 +882,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       for Field in aMessage.Fields do
         GenerateForField(Field, Indent);
       Unitcode.ImplementationCode.Methods.Add('');
+      Unitcode.ImplementationCode.Methods.Add('    else');
+      Unitcode.ImplementationCode.Methods.Add('      SkipField(Stream, WireType);');
 
       Unitcode.ImplementationCode.Methods.Add('    end;');
       Unitcode.ImplementationCode.Methods.Add('  end;' + sLineBreak);
