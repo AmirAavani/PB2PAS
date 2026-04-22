@@ -1,5 +1,6 @@
 unit PBParserUnit;
 {$modeswitch advancedrecords}
+{$COPERATORS ON}
 
 {$mode objfpc}{$H+}
 

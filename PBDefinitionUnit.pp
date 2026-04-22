@@ -1,6 +1,7 @@
 unit PBDefinitionUnit;
 
 {$mode objfpc}{$H+}
+{$COPERATORS ON}
 
 interface
 

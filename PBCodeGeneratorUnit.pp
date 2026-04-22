@@ -1,6 +1,7 @@
 unit PBCodeGeneratorUnit;
 
 {$mode objfpc}{$H+}
+{$COPERATORS ON}
 
 interface
 
