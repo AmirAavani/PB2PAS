@@ -528,6 +528,8 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
 
     procedure GenerateDestructor;
     var
+      Field: TMessageField;
+      CanName: AnsiString;
       MessageClassName: AnsiString;
 
     begin
@@ -535,7 +537,12 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
 
       Unitcode.ImplementationCode.Methods.Add(Format('destructor %s.Destroy;', [MessageClassName]));
       Unitcode.ImplementationCode.Methods.Add('begin');
-      Unitcode.ImplementationCode.Methods.Add('  Self.Clear;');
+      for Field in aMessage.Fields do
+      begin
+        CanName := Canonicalize(Field.Name);
+        if not IsSimpleType(Field.FieldType) or Field.FieldType.IsRepeated then
+          Unitcode.ImplementationCode.Methods.Add(Format('  FreeAndNil(F%s);', [CanName]));
+      end;
       Unitcode.ImplementationCode.Methods.Add('');
       Unitcode.ImplementationCode.Methods.Add('  inherited;');
       Unitcode.ImplementationCode.Methods.Add('end;');
@@ -557,7 +564,11 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       begin
         CanName := Canonicalize(Field.Name);
         if not IsSimpleType(Field.FieldType) or Field.FieldType.IsRepeated then
-          Unitcode.ImplementationCode.Methods.Add(Format('  FreeAndNil(F%s);', [CanName]));
+          Unitcode.ImplementationCode.Methods.Add(Format('  F%s.Clear;', [CanName]))
+        else
+          // Simple non-repeated field: set to default value
+          Unitcode.ImplementationCode.Methods.Add(Format('  F%s := %s;', [CanName,
+            GetDefaultValue(Field.FieldType, CreateContext(aMessage))]));
       end;
       Unitcode.ImplementationCode.Methods.Add('');
       Unitcode.ImplementationCode.Methods.Add('  inherited;');
