@@ -564,7 +564,10 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
       begin
         CanName := Canonicalize(Field.Name);
         if not IsSimpleType(Field.FieldType) or Field.FieldType.IsRepeated then
-          Unitcode.ImplementationCode.Methods.Add(Format('  F%s.Clear;', [CanName]))
+        begin
+          Unitcode.ImplementationCode.Methods.Add(Format('  if F%s <> nil then', [CanName]));
+          Unitcode.ImplementationCode.Methods.Add(Format('     %s.Clear;', [CanName]));
+        end
         else
           // Simple non-repeated field: set to default value
           Unitcode.ImplementationCode.Methods.Add(Format('  F%s := %s;', [CanName,
