@@ -15,6 +15,7 @@ type
   TParam = class(TValue)
   published
     InputFileName: TStringValue;
+    ProtoFile: TStringValue;
     Verbosity: TIntValue;
 
   public

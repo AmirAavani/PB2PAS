@@ -329,6 +329,7 @@ type
 
     constructor Create(_Name: AnsiString; _FieldNumber: Integer;
           _KeyType, _ValueType: AnsiString;
+          _Options: TOptions;
           _Parent: TMessage);
     destructor Destroy; override;
 
@@ -564,11 +565,18 @@ begin
 end;
 
 function TPBBaseType.ToXML: AnsiString;
+var
+  OptionsXML: AnsiString;
 begin
   Result := inherited ToXML;
+  
+  if FOptions <> nil then
+    OptionsXML := FOptions.ToXML
+  else
+    OptionsXML := '';
+  
   Result := Format('<%s Package = "%s">%s%s</%s>',
-    [Self.ClassName, PackageName, Result, FOptions.ToXML, Self.ClassName]);
-
+    [Self.ClassName, PackageName, Result, OptionsXML, Self.ClassName]);
 end;
 
 { TEnum }
@@ -756,13 +764,13 @@ begin
 end;
 
 constructor TMap.Create(_Name: AnsiString; _FieldNumber: Integer; _KeyType,
-  _ValueType: AnsiString; _Parent: TMessage);
+  _ValueType: AnsiString; _Options: TOptions; _Parent: TMessage);
 begin
    inherited Create(_Name,
      '',
      False,
      _FieldNumber,
-     nil,
+     _Options,
      CreateParent(nil, _Parent, nil, nil));
 
    FFieldPBType.Free;

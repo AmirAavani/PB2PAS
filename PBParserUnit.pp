@@ -1096,6 +1096,7 @@ var
   KeyType, ValueType: AnsiString;
   Name: AnsiString;
   FieldNumber: Integer;
+  Options: TOptions;
 // mapField = "map" "<" keyType "," type ">" mapName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
 // keyType = "int32" | "int64" | "uint32" | "uint64" | "sint32" | "sint64" |
 //          "fixed32" | "fixed64" | "sfixed32" | "sfixed64" | "bool" | "string"
@@ -1110,9 +1111,10 @@ begin
   Name := ParseIdent;
   Tokenizer.Expect(ttkEqualSign);
   FieldNumber := ParseFieldNumber;
+  Options := MaybeParseOptions;
   Tokenizer.Expect(ttkSemiColon);
 
-  Result := TMap.Create(Name, FieldNumber, KeyType, ValueType, ParentMessage);
+  Result := TMap.Create(Name, FieldNumber, KeyType, ValueType, Options, ParentMessage);
 
 end;
 
