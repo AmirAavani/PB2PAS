@@ -8,20 +8,21 @@ uses
   ParamManagerUnit;
 
 type
-  { TParam }
-
-  // All the Fields that we want to be assignable using InitAndParse must be
-  // defined as "published" and inherit from TValue.
-  TParam = class(TValue)
+  { TPB2PASParams }
+  TPB2PASParams = class(TValue)
   published
     InputFileName: TStringValue;
-    ProtoFile: TStringValue;
     Verbosity: TIntValue;
-
-  public
-
   end;
 
+  { TZIODumpParams }
+  TZIODumpParams = class(TValue)
+  published
+    InputFileName: TStringValue;
+    MessageName: TStringValue;
+    ProtoFile: TStringValue;
+    Verbosity: TIntValue;
+  end;
 
 implementation
 

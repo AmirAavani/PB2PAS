@@ -280,7 +280,8 @@ begin
     while it.MoveNext do
     begin
       Proto := it.Current.Value;
-      NestedMsgDef := Proto.Messages.ByName[FieldTypeName];
+      if Proto.Messages <> nil then
+        NestedMsgDef := Proto.Messages.ByName[FieldTypeName];
       if NestedMsgDef <> nil then
         Break;
     end;
@@ -665,23 +666,24 @@ end;
 
 procedure PrintUsage;
 begin
-  WriteLn('Usage: ziodump InputFileName=<pattern> [ProtoFile=<file>]');
+  WriteLn('Usage: ziodump InputFileName=<pattern> ProtoFile=<file> MessageName=<name>');
   WriteLn;
   WriteLn('Options:');
   WriteLn('  InputFileName=<pattern>  : ZIO file pattern to dump');
   WriteLn('                             - path@N for N sharded files');
   WriteLn('                             - single_file.zio for single file');
-  WriteLn('  ProtoFile=<file>         : Optional .proto file for schema');
+  WriteLn('  ProtoFile=<file>         : Proto file defining message schemas');
+  WriteLn('  MessageName=<name>       : Name of the root message type in proto');
   WriteLn('  Verbosity=<level>        : Log verbosity level (default: 0)');
   WriteLn;
   WriteLn('Examples:');
-  WriteLn('  ziodump InputFileName=data/output@4 ProtoFile=schema.proto');
-  WriteLn('  ziodump InputFileName=mydata.zio');
+  WriteLn('  ziodump InputFileName=data/papers@4 ProtoFile=schema.proto MessageName=Paper');
+  WriteLn('  ziodump InputFileName=authors.zio ProtoFile=schema.proto MessageName=Author');
   WriteLn;
   WriteLn('The program will read and display all messages in the ZIO file(s).');
 end;
 
-procedure DumpShardedFiles(const Pattern: string; ProtoMap: TProtoMap);
+procedure DumpShardedFiles(const Pattern: string; ProtoMap: TProtoMap; MessageName: AnsiString);
 var
   Pat: TPattern;
   Reader: specialize TZioReader<TGenericMessage>;
@@ -695,7 +697,7 @@ begin
   WriteLn('Reading sharded ZIO files: ', Pattern);
   WriteLn;
   
-  // Find root message (first message in first proto)
+  // Find root message by name
   RootMessage := nil;
   if ProtoMap <> nil then
   begin
@@ -703,14 +705,20 @@ begin
     while it.MoveNext do
     begin
       Proto := it.Current.Value;
-      if (Proto.Messages <> nil) and (Proto.Messages.Count > 0) then
+      if Proto.Messages <> nil then
       begin
-        RootMessage := Proto.Messages[0];
-        WriteLn('Using root message type: ', RootMessage.Name);
-        Break;
+        RootMessage := Proto.Messages.ByName[MessageName];
+        if RootMessage <> nil then
+        begin
+          WriteLn('Using root message type: ', RootMessage.Name);
+          Break;
+        end;
       end;
     end;
     it.Free;
+    
+    if RootMessage = nil then
+      WriteLn('WARNING: Message type "', MessageName, '" not found in proto. Using generic parsing.');
   end;
   
   try
@@ -755,7 +763,7 @@ begin
   end;
 end;
 
-procedure DumpSingleFile(const FilePath: string; ProtoMap: TProtoMap);
+procedure DumpSingleFile(const FilePath: string; ProtoMap: TProtoMap; MessageName: AnsiString);
 var
   FileStream: TFileStream;
   ZStream: TZioStream;
@@ -774,7 +782,7 @@ begin
     Halt(1);
   end;
   
-  // Find root message (first message in first proto)
+  // Find root message by name
   RootMessage := nil;
   if ProtoMap <> nil then
   begin
@@ -782,14 +790,20 @@ begin
     while it.MoveNext do
     begin
       Proto := it.Current.Value;
-      if (Proto.Messages <> nil) and (Proto.Messages.Count > 0) then
+      if Proto.Messages <> nil then
       begin
-        RootMessage := Proto.Messages[0];
-        WriteLn('Using root message type: ', RootMessage.Name);
-        Break;
+        RootMessage := Proto.Messages.ByName[MessageName];
+        if RootMessage <> nil then
+        begin
+          WriteLn('Using root message type: ', RootMessage.Name);
+          Break;
+        end;
       end;
     end;
     it.Free;
+    
+    if RootMessage = nil then
+      WriteLn('WARNING: Message type "', MessageName, '" not found in proto. Using generic parsing.');
   end;
   
   try
@@ -833,7 +847,7 @@ end;
 { Main }
 
 var
-  Params: TParam;
+  Params: TZIODumpParams;
   Pattern: string;
   ProtoMap: TProtoMap;
 
@@ -843,7 +857,7 @@ begin
   WriteLn('===========================================');
   WriteLn;
   
-  Params := TParam.Create;
+  Params := TZIODumpParams.Create;
   try
     ParamManagerUnit.InitAndParse('Verbosity=0', Params);
     ParamManagerUnit.InitFromParameters(Params);
@@ -881,9 +895,9 @@ begin
     try
       // Check if it's a sharded pattern (contains '@')
       if Pos('@', Pattern) > 0 then
-        DumpShardedFiles(Pattern, ProtoMap)
+        DumpShardedFiles(Pattern, ProtoMap, Params.MessageName.Value)
       else
-        DumpSingleFile(Pattern, ProtoMap);
+        DumpSingleFile(Pattern, ProtoMap, Params.MessageName.Value);
       
       WriteLn;
       WriteLn('Done.');

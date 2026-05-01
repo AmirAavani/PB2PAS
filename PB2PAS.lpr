@@ -6,25 +6,16 @@ uses
   PBCodeGeneratorUnit, ListUnit, ParamManagerUnit;
 
 var
-  Params: TParam;
+  Params: TPB2PASParams;
   ProtoMap: TProtoMap;
   it: TProtoMap.TPairEnumerator;
 
 begin
-  Params := TParam.Create;
+  Params := TPB2PASParams.Create;
   ParamManagerUnit.InitAndParse('Verbosity=0', Params);
   ParamManagerUnit.InitFromParameters(Params);
 
   ALoggerUnit.InitLogger(Params.Verbosity.Value);
-  
-  // Warn if ProtoFile is mistakenly provided (it's for ZioDump, not PB2PAS)
-  if Params.ProtoFile.Value <> '' then
-  begin
-    WriteLn('WARNING: ProtoFile parameter is ignored by PB2PAS.');
-    WriteLn('         InputFileName should point to the .proto file to compile.');
-    WriteLn;
-  end;
-  
   WriteLn('<A>');
 
   ProtoMap := TBaseProtoParser.ParseAll(
