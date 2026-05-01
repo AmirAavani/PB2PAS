@@ -339,7 +339,25 @@ begin
     FieldNumber := Integer(Tag shr 3);
     WireType := Integer(Tag and $07);
     
-    FieldName := IntToStr(FieldNumber);
+    // Look up field definition in schema and set field name
+    FieldDef := nil;
+    if MessageDef <> nil then
+    begin
+      for Field in MessageDef.Fields do
+      begin
+        if Field.FieldNumber = FieldNumber then
+        begin
+          FieldDef := Field;
+          Break;
+        end;
+      end;
+    end;
+    
+    // Use field name from schema if available, otherwise use field number
+    if FieldDef <> nil then
+      FieldName := FieldDef.Name
+    else
+      FieldName := IntToStr(FieldNumber);
     
     case WireType of
       0: // Varint
@@ -398,19 +416,7 @@ begin
         if Pos + Len > Length(Data) then
           Len := Length(Data) - Pos;
         
-        // Look up field definition in schema
-        FieldDef := nil;
-        if MessageDef <> nil then
-        begin
-          for Field in MessageDef.Fields do
-          begin
-            if Field.FieldNumber = FieldNumber then
-            begin
-              FieldDef := Field;
-              Break;
-            end;
-          end;
-        end;
+        // FieldDef was already looked up above
         
         // Check if it's a message type using schema
         if IsMessageField(FieldDef, MessageDef, ProtoMap, NestedMsgDef) and (NestedMsgDef <> nil) then
@@ -461,6 +467,56 @@ begin
           end
           else
             Result.Add(FieldName, StrValue);
+        end
+        else if (FieldDef <> nil) and (FieldDef.FieldType <> nil) and FieldDef.FieldType.IsRepeated then
+        begin
+          // Schema says it's a repeated numeric field - try packed repeated
+          PackedArray := nil;
+          
+          // Try different packed formats based on field type
+          if (FieldDef.FieldType.Name = 'int32') or (FieldDef.FieldType.Name = 'int64') or
+             (FieldDef.FieldType.Name = 'uint32') or (FieldDef.FieldType.Name = 'uint64') or
+             (FieldDef.FieldType.Name = 'sint32') or (FieldDef.FieldType.Name = 'sint64') or
+             (FieldDef.FieldType.Name = 'bool') then
+            PackedArray := TryParsePackedVarint(Data, Pos, Len)
+          else if (FieldDef.FieldType.Name = 'fixed32') or (FieldDef.FieldType.Name = 'sfixed32') or
+                  (FieldDef.FieldType.Name = 'float') then
+            PackedArray := TryParsePackedFixed32(Data, Pos, Len)
+          else if (FieldDef.FieldType.Name = 'fixed64') or (FieldDef.FieldType.Name = 'sfixed64') or
+                  (FieldDef.FieldType.Name = 'double') then
+            PackedArray := TryParsePackedFixed64(Data, Pos, Len);
+          
+          if PackedArray <> nil then
+          begin
+            ExistingValue := Result.Find(FieldName);
+            if ExistingValue <> nil then
+            begin
+              if ExistingValue is TJSONArray then
+              begin
+                for Value := 0 to PackedArray.Count - 1 do
+                  TJSONArray(ExistingValue).Add(PackedArray.Items[Value].Clone);
+                PackedArray.Free;
+              end
+              else
+              begin
+                ArrayVal := TJSONArray.Create;
+                ArrayVal.Add(ExistingValue.Clone);
+                for Value := 0 to PackedArray.Count - 1 do
+                  ArrayVal.Add(PackedArray.Items[Value].Clone);
+                Result.Delete(FieldName);
+                Result.Add(FieldName, ArrayVal);
+                PackedArray.Free;
+              end;
+            end
+            else
+              Result.Add(FieldName, PackedArray);
+          end
+          else
+          begin
+            // Fallback to string if packed parsing fails
+            StrValue := BytesToString(Data, Pos, Len);
+            Result.Add(FieldName, StrValue);
+          end;
         end
         else
         begin
