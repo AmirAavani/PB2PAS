@@ -108,34 +108,17 @@ end;
 function BytesToString(const Data: TByteArray; Start, Len: Integer): string;
 var
   i: Integer;
-  AllPrintable: Boolean;
 begin
-  // Check if all bytes are printable ASCII or common whitespace
-  AllPrintable := True;
+  // Always return as UTF-8 string, replacing non-printable with space
+  Result := '';
   for i := Start to Start + Len - 1 do
   begin
-    // Allow printable ASCII (32-126) and common whitespace (tab, newline, carriage return)
-    if not ((Data[i] >= 32) and (Data[i] <= 126)) and 
-       not ((Data[i] = 9) or (Data[i] = 10) or (Data[i] = 13)) then
-    begin
-      AllPrintable := False;
-      Break;
-    end;
-  end;
-  
-  if AllPrintable then
-  begin
-    // Return as string
-    Result := '';
-    for i := Start to Start + Len - 1 do
-      Result := Result + Chr(Data[i]);
-  end
-  else
-  begin
-    // Return as hex
-    Result := '';
-    for i := Start to Start + Len - 1 do
-      Result := Result + Format('%2.2x', [Data[i]]);
+    // Replace non-printable characters (except common whitespace) with space
+    if ((Data[i] >= 32) and (Data[i] <= 126)) or 
+       (Data[i] = 9) or (Data[i] = 10) or (Data[i] = 13) then
+      Result := Result + Chr(Data[i])
+    else
+      Result := Result + ' ';  // Replace non-printable with space
   end;
 end;
 
