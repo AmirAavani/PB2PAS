@@ -788,6 +788,8 @@ class function TBaseProtoParser.ParseAll(_InputFilename: AnsiString): TProtoMap;
   var
     Proto: TProto;
     Import: AnsiString;
+    BasePath: AnsiString;
+    ImportPath: AnsiString;
 
   begin
     ALoggerUnit.GetLogger.FMTDebugLn('Parsing %s', [ProtoFile]);
@@ -795,9 +797,23 @@ class function TBaseProtoParser.ParseAll(_InputFilename: AnsiString): TProtoMap;
     Proto := TBaseProtoParser.Parse(ProtoFile);
     ProtoMap.Add(ProtoFile, Proto);
 
+    // Get the base directory of the current proto file
+    BasePath := ExtractFilePath(ProtoFile);
+
     for Import in Proto.Imports do
-      if ProtoMap.ContainsKey(Import) then
-        RecParse(Import, ProtoMap);
+    begin
+      // Resolve import path relative to the current proto file
+      if IsPrefix('./', Import) or IsPrefix('/', Import) then
+        ImportPath := Import
+      else
+        ImportPath := BasePath + Import;
+
+      ALoggerUnit.GetLogger.FMTDebugLn('  Import: %s -> %s', [Import, ImportPath]);
+
+      // Only parse if not already parsed (FIXED: was checking 'if ContainsKey')
+      if not ProtoMap.ContainsKey(ImportPath) then
+        RecParse(ImportPath, ProtoMap);
+    end;
   end;
 
 var

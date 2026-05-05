@@ -106,20 +106,11 @@ begin
 end;
 
 function BytesToString(const Data: TByteArray; Start, Len: Integer): string;
-var
-  i: Integer;
 begin
-  // Always return as UTF-8 string, replacing non-printable with space
-  Result := '';
-  for i := Start to Start + Len - 1 do
-  begin
-    // Replace non-printable characters (except common whitespace) with space
-    if ((Data[i] >= 32) and (Data[i] <= 126)) or 
-       (Data[i] = 9) or (Data[i] = 10) or (Data[i] = 13) then
-      Result := Result + Chr(Data[i])
-    else
-      Result := Result + ' ';  // Replace non-printable with space
-  end;
+  // Protobuf strings are UTF-8 encoded - preserve raw bytes
+  SetLength(Result, Len);
+  if Len > 0 then
+    Move(Data[Start], Result[1], Len);
 end;
 
 function IsLikelyString(const Data: TByteArray; Start, Len: Integer): Boolean;
@@ -241,6 +232,41 @@ end;
 
 function ParseProtobufToJson(const Data: TByteArray; MessageDef: TMessage; ProtoMap: TProtoMap): TJSONObject; forward;
 
+procedure AddOrAppendToField(JsonObj: TJSONObject; const FieldName: string; NewValue: TJSONData);
+var
+  ExistingValue: TJSONData;
+  ArrayVal: TJSONArray;
+  Idx: Integer;
+begin
+  Idx := JsonObj.IndexOfName(FieldName);
+  
+  if Idx >= 0 then
+  begin
+    ExistingValue := JsonObj.Items[Idx];
+    
+    if ExistingValue is TJSONArray then
+    begin
+      // Already an array, just add to it
+      TJSONArray(ExistingValue).Add(NewValue);
+    end
+    else
+    begin
+      // Convert single value to array
+      ArrayVal := TJSONArray.Create;
+      ArrayVal.Add(ExistingValue.Clone);
+      ArrayVal.Add(NewValue);
+      
+      // Remove old value and add new array
+      JsonObj.Items[Idx] := ArrayVal;
+    end;
+  end
+  else
+  begin
+    // Field doesn't exist, just add it
+    JsonObj.Add(FieldName, NewValue);
+  end;
+end;
+
 function IsMessageField(FieldDef: TMessageField; MessageDef: TMessage; ProtoMap: TProtoMap; out NestedMsgDef: TMessage): Boolean;
 var
   FieldTypeName: AnsiString;
@@ -269,11 +295,11 @@ begin
   // It's a message type - find the definition
   Result := True;
   
-  // Look in current message first
+  // Look in current message's nested messages first
   if MessageDef <> nil then
     NestedMsgDef := MessageDef.Messages.ByName[FieldTypeName];
   
-  // Look in all protos
+  // Look in all protos (top-level messages)
   if (NestedMsgDef = nil) and (ProtoMap <> nil) then
   begin
     it := ProtoMap.GetEnumerator;
@@ -281,11 +307,22 @@ begin
     begin
       Proto := it.Current.Value;
       if Proto.Messages <> nil then
+      begin
         NestedMsgDef := Proto.Messages.ByName[FieldTypeName];
-      if NestedMsgDef <> nil then
-        Break;
+        if NestedMsgDef <> nil then
+        begin
+          WriteLn(StdErr, 'DEBUG: Found message type "', FieldTypeName, '" for field "', FieldDef.Name, '"');
+          Break;
+        end;
+      end;
     end;
     it.Free;
+  end;
+  
+  if NestedMsgDef = nil then
+  begin
+    WriteLn(StdErr, 'WARNING: Message type "', FieldTypeName, '" not found for field "', FieldDef.Name, '"');
+    Result := False;
   end;
 end;
 
@@ -347,25 +384,7 @@ begin
       0: // Varint
       begin
         Value := ReadVarint(Data, Pos);
-        
-        // Check if field already exists (repeated field)
-        ExistingValue := Result.Find(FieldName);
-        if ExistingValue <> nil then
-        begin
-          if ExistingValue is TJSONArray then
-            TJSONArray(ExistingValue).Add(Int64(Value))
-          else
-          begin
-            // Convert to array
-            ArrayVal := TJSONArray.Create;
-            ArrayVal.Add(ExistingValue.Clone);
-            ArrayVal.Add(Int64(Value));
-            Result.Delete(FieldName);
-            Result.Add(FieldName, ArrayVal);
-          end;
-        end
-        else
-          Result.Add(FieldName, Int64(Value));
+        AddOrAppendToField(Result, FieldName, TJSONIntegerNumber.Create(Int64(Value)));
       end;
       
       1: // 64-bit
@@ -376,22 +395,7 @@ begin
         Move(Data[Pos], FixedVal64, 8);
         Inc(Pos, 8);
         
-        ExistingValue := Result.Find(FieldName);
-        if ExistingValue <> nil then
-        begin
-          if ExistingValue is TJSONArray then
-            TJSONArray(ExistingValue).Add(Int64(FixedVal64))
-          else
-          begin
-            ArrayVal := TJSONArray.Create;
-            ArrayVal.Add(ExistingValue.Clone);
-            ArrayVal.Add(Int64(FixedVal64));
-            Result.Delete(FieldName);
-            Result.Add(FieldName, ArrayVal);
-          end;
-        end
-        else
-          Result.Add(FieldName, Int64(FixedVal64));
+        AddOrAppendToField(Result, FieldName, TJSONIntegerNumber.Create(Int64(FixedVal64)));
       end;
       
       2: // Length-delimited (strings, bytes, embedded messages, or packed repeated)
@@ -411,46 +415,14 @@ begin
             SubData[i] := Data[Pos + i];
           
           NestedMsg := ParseProtobufToJson(SubData, NestedMsgDef, ProtoMap);
-          
-          ExistingValue := Result.Find(FieldName);
-          if ExistingValue <> nil then
-          begin
-            if ExistingValue is TJSONArray then
-              TJSONArray(ExistingValue).Add(NestedMsg)
-            else
-            begin
-              ArrayVal := TJSONArray.Create;
-              ArrayVal.Add(ExistingValue.Clone);
-              ArrayVal.Add(NestedMsg);
-              Result.Delete(FieldName);
-              Result.Add(FieldName, ArrayVal);
-            end;
-          end
-          else
-            Result.Add(FieldName, NestedMsg);
+          AddOrAppendToField(Result, FieldName, NestedMsg);
         end
         else if (FieldDef <> nil) and (FieldDef.FieldType <> nil) and 
                 ((FieldDef.FieldType.Name = 'string') or (FieldDef.FieldType.Name = 'bytes')) then
         begin
           // Schema says it's a string/bytes field - just convert directly
           StrValue := BytesToString(Data, Pos, Len);
-          
-          ExistingValue := Result.Find(FieldName);
-          if ExistingValue <> nil then
-          begin
-            if ExistingValue is TJSONArray then
-              TJSONArray(ExistingValue).Add(StrValue)
-            else
-            begin
-              ArrayVal := TJSONArray.Create;
-              ArrayVal.Add(ExistingValue.Clone);
-              ArrayVal.Add(StrValue);
-              Result.Delete(FieldName);
-              Result.Add(FieldName, ArrayVal);
-            end;
-          end
-          else
-            Result.Add(FieldName, StrValue);
+          AddOrAppendToField(Result, FieldName, TJSONString.Create(StrValue));
         end
         else if (FieldDef <> nil) and (FieldDef.FieldType <> nil) and FieldDef.FieldType.IsRepeated then
         begin
@@ -483,13 +455,10 @@ begin
               end
               else
               begin
-                ArrayVal := TJSONArray.Create;
-                ArrayVal.Add(ExistingValue.Clone);
+                // Convert existing single value to array and merge
                 for Value := 0 to PackedArray.Count - 1 do
-                  ArrayVal.Add(PackedArray.Items[Value].Clone);
-                Result.Delete(FieldName);
-                Result.Add(FieldName, ArrayVal);
-                PackedArray.Free;
+                  TJSONArray(PackedArray).Insert(0, ExistingValue.Clone);
+                Result.Items[Result.IndexOfName(FieldName)] := PackedArray;
               end;
             end
             else
@@ -499,7 +468,7 @@ begin
           begin
             // Fallback to string if packed parsing fails
             StrValue := BytesToString(Data, Pos, Len);
-            Result.Add(FieldName, StrValue);
+            AddOrAppendToField(Result, FieldName, TJSONString.Create(StrValue));
           end;
         end
         else
@@ -529,13 +498,10 @@ begin
               end
               else
               begin
-                ArrayVal := TJSONArray.Create;
-                ArrayVal.Add(ExistingValue.Clone);
+                // Convert existing single value to array and merge
                 for Value := 0 to PackedArray.Count - 1 do
-                  ArrayVal.Add(PackedArray.Items[Value].Clone);
-                Result.Delete(FieldName);
-                Result.Add(FieldName, ArrayVal);
-                PackedArray.Free;
+                  TJSONArray(PackedArray).Insert(0, ExistingValue.Clone);
+                Result.Items[Result.IndexOfName(FieldName)] := PackedArray;
               end;
             end
             else
@@ -544,23 +510,7 @@ begin
           else
           begin
             StrValue := BytesToString(Data, Pos, Len);
-            
-            ExistingValue := Result.Find(FieldName);
-            if ExistingValue <> nil then
-            begin
-              if ExistingValue is TJSONArray then
-                TJSONArray(ExistingValue).Add(StrValue)
-              else
-              begin
-                ArrayVal := TJSONArray.Create;
-                ArrayVal.Add(ExistingValue.Clone);
-                ArrayVal.Add(StrValue);
-                Result.Delete(FieldName);
-                Result.Add(FieldName, ArrayVal);
-              end;
-            end
-            else
-              Result.Add(FieldName, StrValue);
+            AddOrAppendToField(Result, FieldName, TJSONString.Create(StrValue));
           end;
         end;
         
@@ -575,22 +525,7 @@ begin
         Move(Data[Pos], FixedVal32, 4);
         Inc(Pos, 4);
         
-        ExistingValue := Result.Find(FieldName);
-        if ExistingValue <> nil then
-        begin
-          if ExistingValue is TJSONArray then
-            TJSONArray(ExistingValue).Add(Int64(FixedVal32))
-          else
-          begin
-            ArrayVal := TJSONArray.Create;
-            ArrayVal.Add(ExistingValue.Clone);
-            ArrayVal.Add(Int64(FixedVal32));
-            Result.Delete(FieldName);
-            Result.Add(FieldName, ArrayVal);
-          end;
-        end
-        else
-          Result.Add(FieldName, Int64(FixedVal32));
+        AddOrAppendToField(Result, FieldName, TJSONIntegerNumber.Create(Int64(FixedVal32)));
       end;
       
       else
