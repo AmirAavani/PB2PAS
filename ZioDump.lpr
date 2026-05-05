@@ -310,10 +310,7 @@ begin
       begin
         NestedMsgDef := Proto.Messages.ByName[FieldTypeName];
         if NestedMsgDef <> nil then
-        begin
-          WriteLn(StdErr, 'DEBUG: Found message type "', FieldTypeName, '" for field "', FieldDef.Name, '"');
           Break;
-        end;
       end;
     end;
     it.Free;
