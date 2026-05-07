@@ -346,7 +346,8 @@ const
     'ProtoHelperListsUnit',
     'ProtoStreamUnit',
     'GenericCollectionUnit',
-    'GRPCClientUnit'
+    'GRPCClientUnit',
+    'GRPCServerUnit'
     );
 var
   S: AnsiString;
@@ -1597,6 +1598,54 @@ procedure TPBCodeGeneratorV1.GenerateCodeForService(const AService: TService;
   procedure GenerateDeclarationForService(const AService: TService;
     InterfaceCode: TUnitCode.TInterface);
 
+    procedure GenerateDeclarationForServerClass(const AService: TService;
+      InterfaceCode: TUnitCode.TInterface);
+    var
+      rpc: TService.TRPCMethod;
+      ServiceClassName: AnsiString;
+      Option: TOption;
+
+    begin
+      ServiceClassName := GetFPCType(
+        AService.ServiceType,
+        CreateContext(Self.Proto)
+        );
+      
+      Unitcode.InterfaceCode.TypeList.Add(Format('%s// Server For Service %s',
+        [Indent, AService.Name]));
+      Unitcode.InterfaceCode.TypeList.Add(Format('%s{ %sServer }',
+        [Indent, ServiceClassName]));
+      Unitcode.InterfaceCode.TypeList.Add(Format('%s%sServer = class(TGRPCServiceHandler)',
+        [Indent, ServiceClassName]));
+      
+      for Option in AService.Options do
+        Unitcode.InterfaceCode.TypeList.Add(Format('%s// %s = %s', [
+          Indent + '  ', Option.OptionName, Option.ConstValue]));
+      
+      Unitcode.InterfaceCode.TypeList.Add(Format('%sprotected', [Indent]));
+      
+      // Generate abstract handler methods for each RPC
+      for rpc in AService.RPCS do
+      begin
+        Unitcode.InterfaceCode.TypeList.Add(
+          '%s  function %s(Request: %s): %s; virtual; abstract;',
+          [
+          Indent,
+          rpc.Name,
+          'T' + rpc.Input,
+          'T' + rpc.Output
+          ]);
+      end;
+      
+      Unitcode.InterfaceCode.TypeList.Add('');
+      Unitcode.InterfaceCode.TypeList.Add(Format('%spublic', [Indent]));
+      Unitcode.InterfaceCode.TypeList.Add(
+        Format('%s  function HandleRequest(const Method: AnsiString; ' +
+               'ReqData: TByteArray): TByteArray; override;', [Indent]));
+      Unitcode.InterfaceCode.TypeList.Add(Format('%send;', [Indent]));
+      Unitcode.InterfaceCode.TypeList.Add('');
+    end;
+
     procedure GenerateDeclarationForClientClass(const AService: TService;
       InterfaceCode: TUnitCode.TInterface);
     var
@@ -1643,13 +1692,14 @@ procedure TPBCodeGeneratorV1.GenerateCodeForService(const AService: TService;
 
   begin
     GenerateDeclarationForClientClass(AService, InterfaceCode);
+    GenerateDeclarationForServerClass(AService, InterfaceCode);
 
   end;
 
   procedure GenerateImplementationForService(const AService: TService;
     ImplementationCode: TUnitCode.TImplementation);
   begin
-
+    // Currently empty - could add service-level helpers here
   end;
 
   procedure GenerateImplementationForClient(const AService: TService;
@@ -1695,10 +1745,128 @@ procedure TPBCodeGeneratorV1.GenerateCodeForService(const AService: TService;
   end;
 
 
+  procedure GenerateImplementationForServer(const AService: TService;
+    ImplementationCode: TUnitCode.TImplementation);
+  var
+    ServiceClassName: AnsiString;
+    rpc: TService.TRPCMethod;
+    FirstRPC: Boolean;
+
+  begin
+    ServiceClassName := GetFPCType(
+      AService.ServiceType,
+      CreateContext(Self.Proto)
+      );
+
+    // Generate HandleRequest dispatcher
+    Unitcode.ImplementationCode.Methods.Add(Format(
+      'function %sServer.HandleRequest(const Method: AnsiString; ' +
+      'ReqData: TByteArray): TByteArray;',
+      [ServiceClassName]));
+    Unitcode.ImplementationCode.Methods.Add('var');
+    Unitcode.ImplementationCode.Methods.Add('  Request: TBaseMessage;');
+    Unitcode.ImplementationCode.Methods.Add('  Response: TBaseMessage;');
+    Unitcode.ImplementationCode.Methods.Add('  Stream: TMemoryStream;');
+    Unitcode.ImplementationCode.Methods.Add('');
+    Unitcode.ImplementationCode.Methods.Add('begin');
+    Unitcode.ImplementationCode.Methods.Add('  Result := nil;');
+    Unitcode.ImplementationCode.Methods.Add('  Request := nil;');
+    Unitcode.ImplementationCode.Methods.Add('  Response := nil;');
+    Unitcode.ImplementationCode.Methods.Add('  Stream := nil;');
+    Unitcode.ImplementationCode.Methods.Add('');
+    Unitcode.ImplementationCode.Methods.Add('  try');
+    
+    FirstRPC := True;
+    for rpc in AService.RPCS do
+    begin
+      if FirstRPC then
+      begin
+        Unitcode.ImplementationCode.Methods.Add(Format(
+          '    if Method = %s%s%s then',
+          [SingleQuote, rpc.Name, SingleQuote]));
+        FirstRPC := False;
+      end
+      else
+        Unitcode.ImplementationCode.Methods.Add(Format(
+          '    else if Method = %s%s%s then',
+          [SingleQuote, rpc.Name, SingleQuote]));
+      
+      Unitcode.ImplementationCode.Methods.Add('    begin');
+      Unitcode.ImplementationCode.Methods.Add(Format(
+        '      Request := %s.Create;',
+        ['T' + rpc.Input]));
+      Unitcode.ImplementationCode.Methods.Add('');
+      Unitcode.ImplementationCode.Methods.Add(
+        '      // Deserialize request');
+      Unitcode.ImplementationCode.Methods.Add(
+        '      Stream := TMemoryStream.Create;');
+      Unitcode.ImplementationCode.Methods.Add(
+        '      if Length(ReqData) > 0 then');
+      Unitcode.ImplementationCode.Methods.Add(
+        '        Stream.Write(ReqData[0], Length(ReqData));');
+      Unitcode.ImplementationCode.Methods.Add(
+        '      Stream.Position := 0;');
+      Unitcode.ImplementationCode.Methods.Add(
+        '      if not Request.LoadFromStream(Stream) then');
+      Unitcode.ImplementationCode.Methods.Add(
+        '        Exit;');
+      Unitcode.ImplementationCode.Methods.Add(
+        '      FreeAndNil(Stream);');
+      Unitcode.ImplementationCode.Methods.Add('');
+      Unitcode.ImplementationCode.Methods.Add(
+        '      // Call handler');
+      Unitcode.ImplementationCode.Methods.Add(Format(
+        '      Response := Self.%s(Request as %s);',
+        [rpc.Name, 'T' + rpc.Input]));
+      Unitcode.ImplementationCode.Methods.Add('');
+      Unitcode.ImplementationCode.Methods.Add(
+        '      // Serialize response');
+      Unitcode.ImplementationCode.Methods.Add(
+        '      if Response <> nil then');
+      Unitcode.ImplementationCode.Methods.Add(
+        '      begin');
+      Unitcode.ImplementationCode.Methods.Add(
+        '        Stream := TMemoryStream.Create;');
+      Unitcode.ImplementationCode.Methods.Add(
+        '        Response.SaveToStream(Stream);');
+      Unitcode.ImplementationCode.Methods.Add(
+        '        Stream.Position := 0;');
+      Unitcode.ImplementationCode.Methods.Add(
+        '        SetLength(Result, Stream.Size);');
+      Unitcode.ImplementationCode.Methods.Add(
+        '        if Stream.Size > 0 then');
+      Unitcode.ImplementationCode.Methods.Add(
+        '          Stream.Read(Result[0], Stream.Size);');
+      Unitcode.ImplementationCode.Methods.Add(
+        '      end;');
+      Unitcode.ImplementationCode.Methods.Add('    end');
+    end;
+    
+    if AService.RPCS.Count > 0 then
+    begin
+      Unitcode.ImplementationCode.Methods.Add('    else');
+      Unitcode.ImplementationCode.Methods.Add('    begin');
+      Unitcode.ImplementationCode.Methods.Add(
+        '      // Unknown method');
+      Unitcode.ImplementationCode.Methods.Add('    end;');
+    end;
+    
+    Unitcode.ImplementationCode.Methods.Add('');
+    Unitcode.ImplementationCode.Methods.Add('  finally');
+    Unitcode.ImplementationCode.Methods.Add('    FreeAndNil(Request);');
+    Unitcode.ImplementationCode.Methods.Add('    FreeAndNil(Response);');
+    Unitcode.ImplementationCode.Methods.Add('    FreeAndNil(Stream);');
+    Unitcode.ImplementationCode.Methods.Add('  end;');
+    Unitcode.ImplementationCode.Methods.Add('end;');
+    Unitcode.ImplementationCode.Methods.Add('');
+
+  end;
+
 begin
   GenerateDeclarationForService(AService, Unitcode.InterfaceCode);
   GenerateImplementationForService(AService, Unitcode.ImplementationCode);
   GenerateImplementationForClient(AService, Unitcode.ImplementationCode);
+  GenerateImplementationForServer(AService, Unitcode.ImplementationCode);
 
 end;
 
