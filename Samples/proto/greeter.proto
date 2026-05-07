@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package greeter;
+option go_package = "github.com/example/greeter/proto";
+
+// The request message containing the user's name.
+message HelloRequest {
+  string name = 1;
+}
+
+// The response message containing the greetings.
+message HelloReply {
+  string message = 1;
+}
+
+// The greeting service definition.
+service GreeterService {
+  // A standard (unary) RPC: client sends one request, server sends one response.
+  rpc SayHello (HelloRequest) returns (HelloReply);
+
+  // A server-streaming RPC: client sends one request, server sends multiple responses.
+  rpc ListHellos (HelloRequest) returns (HelloReply);
+}
+

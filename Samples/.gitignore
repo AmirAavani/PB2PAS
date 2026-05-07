@@ -1,0 +1,15 @@
+# Compiled binaries
+ServiceClient
+ServiceServer
+go-client/greeter-client
+go-server/greeter-server
+
+# Build artifacts
+*.o
+*.ppu
+*.log
+
+# Temporary files
+*.swp
+*.swo
+*~
