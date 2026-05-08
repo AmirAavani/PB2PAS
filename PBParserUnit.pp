@@ -35,14 +35,16 @@ type
     ttkClosePar, ttkSemiColon, ttkEqualSign, ttkStar,
     ttkColon, ttkComma, ttkDoubleQuote, ttkSingleQuote,
     ttkMinus, ttkPlus, ttkQuestionMark, ttkLessThan, ttkGreaterThan, ttkOpenBracket,
-      ttkCloseBracket, ttkAtSgin,
+      ttkCloseBracket, ttkAtSgin, ttkAmpersand, ttkPipe, ttkPercent, ttkCaret,
+      ttkTilde, ttkBacktick, ttkDollar,
     ttkIdentifier, ttkComment, ttkNumber, ttkSpace, ttkSlash,
     ttkEndLine, ttkEOF);
   TCharKind = (tckStart, tckDot, tckOpenBrace, tckCloseBrace, tckOpenPar,
     tckClosePar, tckSemiColon, tckEqualSign, tckStar,
       tckColon, tckComma, tckDoubleQuote, tckSingleQuote,
       tckMinus, tckPlus, tckQuestionMark, tckLessThan, tckGreaterThan, tckOpenBracket,
-      tckCloseBracket, tckAtSgin,
+      tckCloseBracket, tckAtSgin, tckAmpersand, tckPipe, tckPercent, tckCaret,
+      tckTilde, tckBacktick, tckDollar,
 
       tckLetter, tckDigit,  tckUnderline, tckSpace, tckSlash, tckBackSlash, tckNumberSign,
       tckExclamationMark,
@@ -242,9 +244,16 @@ function TTokenizer.GetNextToken: TToken;
     '#': Result.Kind := tckNumberSign;
     '!': Result.Kind := tckExclamationMark;
     '@': Result.Kind := tckAtSgin;
-    '+': Result.Kind := tckPlus
+    '+': Result.Kind := tckPlus;
+    '&': Result.Kind := tckAmpersand;
+    '|': Result.Kind := tckPipe;
+    '%': Result.Kind := tckPercent;
+    '^': Result.Kind := tckCaret;
+    '~': Result.Kind := tckTilde;
+    '`': Result.Kind := tckBacktick;
+    '$': Result.Kind := tckDollar
     else
-      ALoggerUnit.FmtFatalLnIFFalse(False, Result.ch + ' ' + IntToStr(Ord(Result.Ch)), []);
+      ALoggerUnit.FmtFatalLnIFFalse(False, '%s (%d) visited', [Result.ch, Ord(Result.Ch)]);
       raise EInvalidCharacter.Create(Result.ch, Ord(Result.Ch));
     end;
 
@@ -310,7 +319,8 @@ begin
       tckCloseBrace, tckOpenPar, tckClosePar, tckSemiColon, tckEqualSign,
       tckColon, tckComma, tckDoubleQuote, tckSingleQuote,
       tckMinus, tckQuestionMark, tckLessThan, tckGreaterThan, tckOpenBracket,
-      tckCloseBracket, tckAtSgin:
+      tckCloseBracket, tckAtSgin, tckAmpersand, tckPipe, tckPercent, tckCaret,
+      tckTilde, tckBacktick, tckDollar:
     begin
       Result.TokenString += CurrentChar.Ch;
       Result.Kind := TTokenKind(Ord(CurrentChar.Kind));
