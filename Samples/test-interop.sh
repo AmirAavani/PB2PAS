@@ -2,6 +2,7 @@
 
 # Cross-compatibility test script
 # Tests all combinations of Go and Pascal clients/servers
+# Both now use gRPC-Web protocol, so all tests should PASS!
 
 set -e
 
@@ -192,7 +193,7 @@ run_test "go-to-go" \
     "50052" \
     "no"
 
-# Test 3: Go Client → Pascal Server (CRITICAL TEST)
+# Test 3: Go Client → Pascal Server (SHOULD NOW WORK!)
 run_test "go-to-pascal" \
     "./ServiceServer" \
     "Pascal Server (port 50051)" \
@@ -201,7 +202,7 @@ run_test "go-to-pascal" \
     "50051" \
     "yes"
 
-# Test 4: Pascal Client → Go Server (CRITICAL TEST)
+# Test 4: Pascal Client → Go Server (SHOULD NOW WORK!)
 run_test "pascal-to-go" \
     "./go-server/greeter-server" \
     "Go Server (port 50052)" \
@@ -227,6 +228,7 @@ echo
 if [ $TESTS_FAILED -eq 0 ]; then
     echo -e "${GREEN}╔═══════════════════════════════════════════════╗${NC}"
     echo -e "${GREEN}║   ALL TESTS PASSED! ✓                        ║${NC}"
+    echo -e "${GREEN}║   gRPC-Web works perfectly!                  ║${NC}"
     echo -e "${GREEN}║   Pascal ↔ Go interoperability confirmed!    ║${NC}"
     echo -e "${GREEN}╚═══════════════════════════════════════════════╝${NC}"
     exit 0
@@ -234,6 +236,9 @@ else
     echo -e "${RED}╔═══════════════════════════════════════════════╗${NC}"
     echo -e "${RED}║   SOME TESTS FAILED ✗                        ║${NC}"
     echo -e "${RED}║   Check logs above for details               ║${NC}"
+    echo -e "${RED}║                                               ║${NC}"
+    echo -e "${RED}║   Make sure you ran: ./setup-go.sh           ║${NC}"
+    echo -e "${RED}║   to rebuild with gRPC-Web support           ║${NC}"
     echo -e "${RED}╚═══════════════════════════════════════════════╝${NC}"
     exit 1
 fi
