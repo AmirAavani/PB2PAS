@@ -4,7 +4,7 @@ unit TestDep1Unit;
 interface
 
 uses
- classes, fgl, sysutils, ProtoHelperUnit, ProtoHelperListsUnit, ProtoStreamUnit, GenericCollectionUnit;
+ classes, fgl, sysutils, ProtoHelperUnit, ProtoHelperListsUnit, ProtoStreamUnit, GenericCollectionUnit, GRPCClientUnit, GRPCServerUnit;
 
 type
   // AnEnum
