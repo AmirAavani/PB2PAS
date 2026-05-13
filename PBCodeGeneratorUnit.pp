@@ -873,7 +873,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         Unitcode.ImplementationCode.Methods.Add(Format('%s%d:' + sLineBreak +
           '%s  %s := Load%s(Stream);' + sLineBreak,
           [Indent, Field.FieldNumber,
-          Indent, Field.CanonicalizeFullNameForWriting,
+          Indent, Field.CanonicalizeFullName,
           Canonicalize(Field.FieldType.Name)]));
 
       end;
@@ -883,7 +883,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
         Unitcode.ImplementationCode.Methods.Add(
           Format('%s%s%d: %s := %s(LoadInt32(Stream));',
           [sLineBreak, Indent, Field.FieldNumber,
-          Field.CanonicalizeFullNameForWriting,
+          Field.CanonicalizeFullName,
           GetFPCType(Field.FieldType, CreateContext(aMessage))]));
 
       end;
@@ -918,9 +918,9 @@ procedure TPBCodeGeneratorV1.GenerateCodeForMessage(const AMessage: TMessage;
           '%s    Exit(False);',
           [Indent, Indent]));
         Unitcode.ImplementationCode.Methods.Add(
-          Format('%s  if not LoadMessage(Stream, Mutable%s) then' + sLineBreak +
+          Format('%s  if not LoadMessage(Stream, %s) then' + sLineBreak +
           '%s    Exit(False);',
-          [Indent, Field.CanonicalizeFullName, Indent]));
+          [Indent, Field.CanonicalizeFullNameForWriting, Indent]));
         Unitcode.ImplementationCode.Methods.Add(Format('%send;', [Indent]));
       end;
 
@@ -1263,15 +1263,28 @@ procedure TPBCodeGeneratorV1.GenerateCodeForOneOf(const OneOf: TOneOf;
       Unitcode.InterfaceCode.TypeList.Add(Format('%sprocedure Set%s(_%s: %s);',
         [Indent + '  ', Canonicalize(Field.Name), Canonicalize(Field.Name),
         GetFPCType(Field.FieldType, Context)]));
+      // Add GetOrCreate for non-simple types
+      if not IsSimpleType(Field.FieldType) then
+        Unitcode.InterfaceCode.TypeList.Add(Format('%sfunction GetOrCreate%s: %s;',
+          [Indent + '  ', Canonicalize(Field.Name),
+          GetFPCType(Field.FieldType, Context)]));
     end;
     Unitcode.InterfaceCode.TypeList.Add('');
 
     Unitcode.InterfaceCode.TypeList.Add('%spublic', [Indent]);
     for Field in OneOf.Fields do
+    begin
       Unitcode.InterfaceCode.TypeList.Add(
         Format('%sproperty %s: %s read Get%s write Set%s;',
         [Indent + '  ', Canonicalize(Field.Name), GetFPCType(Field.FieldType, Context),
         Canonicalize(Field.Name), Canonicalize(Field.Name)]));
+      // Add Mutable property for non-simple types
+      if not IsSimpleType(Field.FieldType) then
+        Unitcode.InterfaceCode.TypeList.Add(
+          Format('%sproperty Mutable%s: %s read GetOrCreate%s;',
+          [Indent + '  ', Canonicalize(Field.Name), GetFPCType(Field.FieldType, Context),
+          Canonicalize(Field.Name)]));
+    end;
     Unitcode.InterfaceCode.TypeList.Add('');
     Unitcode.InterfaceCode.TypeList.Add(Format('%s  constructor Create;', [Indent]));
 
@@ -1330,6 +1343,7 @@ procedure TPBCodeGeneratorV1.GenerateCodeForOneOf(const OneOf: TOneOf;
       Unitcode.ImplementationCode.Methods.Add(Format('end;', []));
       Unitcode.ImplementationCode.Methods.Add(Format('', []));
 
+
       Unitcode.ImplementationCode.Methods.Add(Format('procedure %s.Set%s(_%s: %s);',
         [OneOfClassName, Canonicalize(Field.Name), Canonicalize(Field.Name),
         GetFPCType(Field.FieldType, Context)]));
@@ -1373,6 +1387,33 @@ procedure TPBCodeGeneratorV1.GenerateCodeForOneOf(const OneOf: TOneOf;
 
     end;
     Unitcode.ImplementationCode.Methods.Add('');
+
+    // Generate GetOrCreate methods for non-simple types
+    for i := 0 to OneOf.Fields.Count - 1 do
+    begin
+      Field := OneOf.Fields[i];
+      if not IsSimpleType(Field.FieldType) then
+      begin
+        Unitcode.ImplementationCode.Methods.Add(Format('function %s.GetOrCreate%s: %s;',
+          [OneOfClassName, Canonicalize(Field.Name),
+          GetFPCType(Field.FieldType, Context)]));
+        Unitcode.ImplementationCode.Methods.Add('begin');
+        Unitcode.ImplementationCode.Methods.Add(
+          Format('  if Self.GetPointerByIndex(%d) = nil then', [i]));
+        Unitcode.ImplementationCode.Methods.Add('  begin');
+        Unitcode.ImplementationCode.Methods.Add(
+          Format('    Result := %s.Create;', [GetFPCType(Field.FieldType, Context)]));
+        Unitcode.ImplementationCode.Methods.Add(
+          Format('    Self.SetPointerByIndex(%d, Result);', [i]));
+        Unitcode.ImplementationCode.Methods.Add('  end');
+        Unitcode.ImplementationCode.Methods.Add('  else');
+        Unitcode.ImplementationCode.Methods.Add(
+          Format('    Result := %s(Self.GetPointerByIndex(%d));',
+          [GetFPCType(Field.FieldType, Context), i]));
+        Unitcode.ImplementationCode.Methods.Add('end;');
+        Unitcode.ImplementationCode.Methods.Add('');
+      end;
+    end;
 
     Unitcode.ImplementationCode.Methods.Add(Format('constructor %s.Create;',
       [OneOfClassName]));

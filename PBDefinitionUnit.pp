@@ -935,7 +935,7 @@ end;
 
 function TOneOfField.GetCanonicalizeFullNameForWriting: AnsiString;
 begin
-  Result := Format('%s.%s', [FieldType.Parent.OneOf.GetCanonicalizeFullNameForWriting,
+  Result := Format('%s.Mutable%s', [FieldType.Parent.OneOf.GetCanonicalizeFullNameForWriting,
     Canonicalize(GetName)]);
 
 end;
@@ -1037,7 +1037,7 @@ end;
 
 function TMessageField.GetCanonicalizeFullNameForWriting: AnsiString;
 begin
-  Result := GetCanonicalizeFullName;
+  Result := 'Mutable' + GetCanonicalizeFullName;
 
 end;
 
