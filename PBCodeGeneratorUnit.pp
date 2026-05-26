@@ -377,7 +377,6 @@ begin
   Unitcode.InterfaceCode.TypeList.Add(Format('%s// %s', [Indent, AnEnum.Name]));
   Unitcode.InterfaceCode.TypeList.Add(Format('%s%s = (',
     [Indent, GetFPCType(AnEnum, Context)]));
-
   // Build the enum prefix: if the enum is nested in a message, include the message name
   if (Context.Message <> nil) and (Context.Message.Name <> '') then
     EnumPrefix := UpperCase(Canonicalize(Context.Message.Name)) + '_' + UpperCase(AnEnum.Name)
