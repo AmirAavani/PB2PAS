@@ -638,14 +638,26 @@ begin
 end;
 
 function TService.ToXML: AnsiString;
+var
+  OptionsXML, RPCsXML: AnsiString;
 begin
   Result := inherited ToXML;
+  
+  if Options <> nil then
+    OptionsXML := Options.ToXML
+  else
+    OptionsXML := '';
+    
+  if RPCs <> nil then
+    RPCsXML := RPCs.ToXML
+  else
+    RPCsXML := '';
+  
   Result:= Format('<Service> %s %s %s</Service>',
     [Result,
-    Options.ToXML,
-    RPCs.TOXML]
-    )
-
+    OptionsXML,
+    RPCsXML]
+    );
 end;
 
 { TService.TRPCMethod }

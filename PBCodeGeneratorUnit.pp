@@ -139,11 +139,8 @@ begin
   Target += aText + #10;
 end;
 
-function EmptyContext: TPBCodeGeneratorV1.TContext;
-begin
-  FillChar(Result, 0, SizeOf(Result));
-
-end;
+var
+  EmptyContext:  TPBCodeGeneratorV1.TContext;
 
 function CreateContext(Msg: TMessage): TPBCodeGeneratorV1.TContext;
 begin
@@ -374,18 +371,25 @@ var
   EnumField: TEnumField;
   i: Integer;
   Code: TStringList;
+  EnumPrefix: AnsiString;
 
 begin
   Unitcode.InterfaceCode.TypeList.Add(Format('%s// %s', [Indent, AnEnum.Name]));
   Unitcode.InterfaceCode.TypeList.Add(Format('%s%s = (',
     [Indent, GetFPCType(AnEnum, Context)]));
 
+  // Build the enum prefix: if the enum is nested in a message, include the message name
+  if (Context.Message <> nil) and (Context.Message.Name <> '') then
+    EnumPrefix := UpperCase(Canonicalize(Context.Message.Name)) + '_' + UpperCase(AnEnum.Name)
+  else
+    EnumPrefix := UpperCase(AnEnum.Name);
+
   Code := TStringList.Create;
   AnEnum.AllFields.Sort(specialize TComparer<TEnumField>.Construct(@CompareEnumFields));
   for i := 0 to AnEnum.AllFields.Count - 1 do
   begin
     EnumField := AnEnum.AllFields[i];
-    Code.Add(Format('%s%s_%s = %d', [Indent + '  ', UpperCase(AnEnum.Name),
+    Code.Add(Format('%s%s_%s = %d', [Indent + '  ', EnumPrefix,
       EnumField.Name, EnumField.Value]));
   end;
   Unitcode.InterfaceCode.TypeList.Add(JoinStrings(Code, ',' + sLineBreak));
@@ -2111,5 +2115,8 @@ begin
   inherited;
 
 end;
+
+initialization
+  FillChar(EmptyContext, SizeOf(EmptyContext), 0);
 
 end.
