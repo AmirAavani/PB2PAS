@@ -148,7 +148,7 @@ type
     function ParseOneOf(ParentMessage: TMessage): TOneOf;
     function ParseOneOfField(ParentOneOf: TOneOf): TOneOfField;
     function ParseMap(ParentMessage: TMessage): TMap;
-    function ParseMessageField(ParentMessage: TMessage): TMessageField;
+    function ParseMessageField(ParentMessage: TMessage; Parent: TParent): TMessageField;
     function ParseConstant: TConstant;
     function ParseService(Parent: TParent): TService;
     function ParseRPC(Parent: TParent): TService.TRPCMethod;
@@ -903,7 +903,7 @@ begin
     else
     begin
       Tokenizer.Rewind;
-      Fields.Add(ParseMessageField(Result));
+      Fields.Add(ParseMessageField(Result, CreateParent(nil, Result, Parent.Proto, nil)));
     end;
 
     Token := Tokenizer.GetNextToken;
@@ -1144,8 +1144,8 @@ begin
 
 end;
 
-function TProto3Parser.ParseMessageField(ParentMessage: TMessage
-  ): TMessageField;
+function TProto3Parser.ParseMessageField(ParentMessage: TMessage;
+  Parent: TParent): TMessageField;
 var
   Name: AnsiString;
   FieldType: AnsiString;

@@ -70,6 +70,8 @@ type
     property NonRepeatedType4FPC: AnsiString read GetNonRepeatedType4FPC;
     property IsRepeated: Boolean read FIsRepeated;
 
+    function IsSimpleType: Boolean; virtual;
+
     constructor Create(_Name: AnsiString; _IsRepeated: Boolean;
         _Options: TOptions; _Parent: TParent);
     function ToXML: AnsiString; override;
@@ -90,6 +92,8 @@ type
     property KeyPBType: TPBBaseType read FKeyPBType;
     property ValuePBType: TPBBaseType read FValuePBType;
 
+    function IsSimpleType: Boolean; override;
+
     constructor Create(_KeyType, _ValueType: TPBBaseType; _Parent: TParent);
     destructor Destroy; override;
 
@@ -108,6 +112,8 @@ type
 
     constructor Create(aName: AnsiString; _IsRepeated: Boolean; _Options: TOptions;  _Parent: TParent);
     destructor Destroy; override;
+
+    function IsSimpleType: Boolean; override;
   end;
 
   { TOneOfPBType }
@@ -131,6 +137,8 @@ type
   { TMessageField }
 
   TMessageField = class(TObject)
+  private
+    FParent: TParent;
   protected
     FFieldNumber: Integer;
     FFieldPBType: TPBBaseType;
@@ -155,6 +163,7 @@ type
     property CanonicalizeFullNameForReading: AnsiString read GetCanonicalizeFullNameForReading;
     property FieldNumber: Integer read GetFieldNumber;
     property Options: TOptions read GetOptions;
+    property Parent: TParent read FParent;
 
     constructor Create(_Name: AnsiString; _FieldType: AnsiString; _IsRepeated: Boolean;
       _FieldNumber: Integer; _Options: TOptions; _Parent: TParent);
@@ -204,6 +213,8 @@ type
     destructor Destroy; override;
 
     function ToXML: AnsiString; override;
+
+    function IsSimpleType: Boolean; override;
   end;
 
   TEnums = specialize TObjectList<TEnum>;
@@ -341,15 +352,15 @@ type
 
   { TMessage }
 
-  TMessage = class(TObject)
+  TMessage = class(TPBBaseType)
   private
     MessagePBType: TMessagePBType;
     FFields: TMessageFields;
     FMessages: specialize TObjectList<TMessage>;
-    FOptions: TOptions;
+    // FOptions: TOptions;
     FEnums: TEnums;
-    FName: AnsiString;
-    FParent: TParent;
+    // FName: AnsiString;
+    // FParent: TParent;
 
     procedure PrepareForCodeGeneration(AllClassesNames, AllEnumsNames: TStringList);
   public
@@ -370,6 +381,10 @@ type
     destructor Destroy; override;
 
     function ToXML: AnsiString;
+
+    function GetPBTypeOrNil(const TypeName: AnsiString): TPBBaseType;
+    function IsSimpleType: Boolean; override;
+
   end;
 
   TMessages = specialize TObjectList<TMessage>;
@@ -487,6 +502,11 @@ begin
   inherited Destroy;
 end;
 
+function TPBTypeWithFields.IsSimpleType: Boolean;
+begin
+  Result:= False;
+end;
+
 { TMapPBType }
 
 function TMapPBType.GetFullName: AnsiString;
@@ -504,6 +524,12 @@ end;
 function TMapPBType.GetPackage: AnsiString;
 begin
   Result := '';
+
+end;
+
+function TMapPBType.IsSimpleType: Boolean;
+begin
+  Result:= False;
 
 end;
 
@@ -550,6 +576,18 @@ begin
 
   StrList.Free;
 
+end;
+
+function TPBBaseType.IsSimpleType: Boolean;
+begin
+  case Self.FullName of
+    'double', 'float', 'int32', 'int64', 'uint32', 'uint64'
+      , 'sint32', 'sint64', 'fixed32', 'fixed64', 'sfixed32', 'sfixed64'
+      , 'bool', 'string', 'byte':
+      Exit(True);
+  end;
+
+  Result := False;
 end;
 
 constructor TPBBaseType.Create(_Name: AnsiString;
@@ -605,6 +643,12 @@ begin
     [Name, Options.ToXML]);
   Result += AllFields.ToXML;
   Result += Format('</TEnum>', []);
+end;
+
+function TEnum.IsSimpleType: Boolean;
+begin
+  Result:= True;
+
 end;
 
 { TServicePBType }
@@ -1005,14 +1049,11 @@ var
   Field: TMessageField;
 
 begin
-  inherited Create;
+  inherited Create(_Name, False, _Options, _Parent);
 
-  FName := _Name;
   FFields := _Fields;
   FMessages := _Messages;
-  FOptions := _Options;
   FEnums := _Enums;
-  FParent := _Parent;
   MessagePBType := TMessagePBType.Create(_Name, _Parent);
 
   for Field in FFields do
@@ -1045,11 +1086,39 @@ begin
      Enums.ToXML]);
 end;
 
+function TMessage.GetPBTypeOrNil(const TypeName: AnsiString): TPBBaseType;
+var
+  Enum: TEnum;
+  Message: TMessage;
+
+begin
+  Result := nil;
+  for Enum in Self.Enums do
+    if Enum.Name = TypeName then
+      Exit(Enum);
+
+  for Message in Self.FMessages do
+    if Message.Name = TypeName then
+      Exit(Message);
+
+  // TODO: Implement Recursive call to handle messages defined inside a message.
+
+
+end;
+
+function TMessage.IsSimpleType: Boolean;
+begin
+  Result := False;
+
+end;
+
 { TMessageField }
 
 function TMessageField.GetCanonicalizeFullNameForWriting: AnsiString;
 begin
-  Result := 'Mutable' + GetCanonicalizeFullName;
+  Result := GetCanonicalizeFullName;
+  if not Self.FieldType.IsSimpleType then
+    Result := 'Mutable' + Result;
 
 end;
 
@@ -1104,6 +1173,7 @@ begin
   FFieldPBType :=  TPBBaseType.Create(_FieldType, _IsRepeated, _Options, _Parent);
   FFieldNumber := _FieldNumber;
   FOptions := _Options;
+  FParent := _Parent;
 
 end;
 
