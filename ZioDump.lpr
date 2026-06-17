@@ -7,7 +7,7 @@ uses
   Classes,
   SysUtils,
   Math,
-  ZIOStreamUnit,
+  DelimitedProtoStreamUnit,
   ProtoHelperUnit,
   ProtoStreamUnit,
   fpjson,
@@ -648,7 +648,7 @@ type
     MessageName: ansistring);
   var
     Pat: TPattern;
-    Reader: specialize TZioReader<TGenericMessage>;
+    Reader: specialize TDelimitedProtoReader<TGenericMessage>;
     Msg: TGenericMessage;
     MessageCount: integer;
     i: integer;
@@ -694,7 +694,7 @@ type
           WriteLn('  [', i, '] ', Pat.GetShardPath(i));
         WriteLn;
 
-        Reader := specialize TZioReader<TGenericMessage>.Create(Pat);
+        Reader := specialize TDelimitedProtoReader<TGenericMessage>.Create(Pat);
         try
           MessageCount := 0;
           Msg := TGenericMessage.Create;
@@ -730,7 +730,7 @@ type
     MessageName: ansistring);
   var
     FileStream: TFileStream;
-    ZStream: TZioStream;
+    ZStream: TDelimitedProtoStream;
     Msg: TGenericMessage;
     MessageCount: integer;
     RootMessage: TMessage;
@@ -771,7 +771,7 @@ type
           '" not found in proto. Using generic parsing.');
     end;
 
-    ZStream := TZioStream.CreateReader(FilePath);
+    ZStream := TDelimitedProtoStream.CreateReader(FilePath);
     WriteLn('File size: ', FileStream.Size, ' bytes');
     WriteLn;
 
