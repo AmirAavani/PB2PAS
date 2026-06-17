@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <CONFIG>
   <ProjectOptions>
-    <Version Value="12"/>
+    <Version Value="13"/>
     <General>
       <Flags>
         <MainUnitHasCreateFormStatements Value="False"/>
@@ -113,7 +113,7 @@
     </Target>
     <SearchPaths>
       <IncludeFiles Value="$(ProjOutDir)"/>
-      <OtherUnitFiles Value="../General-Purpose-Units;modules/Unicode-Functions;modules/ALogger;modules/Threading;modules/TemplatesUnit;modules/PB2PAS;ParamManager;modules/General-Purpose-Units"/>
+      <OtherUnitFiles Value="modules/Unicode-Functions;modules/ALogger;modules/Threading;modules/TemplatesUnit;modules/PB2PAS;ParamManager;modules/General-Purpose-Units"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
     <Linking>
