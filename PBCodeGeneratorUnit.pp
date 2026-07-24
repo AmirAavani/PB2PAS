@@ -351,7 +351,7 @@ begin
 
 end;
 
-function CompareEnumFields(constref a, b: TEnumField): Integer;
+function CompareEnumFields(const a, b: TEnumField): Integer;
 begin
   Result := a.Value - b.Value;
 

@@ -1024,7 +1024,7 @@ end;
 
 { TMessage }
 
-function CompareMessageFields(constref Item1, Item2: TMessageField): Integer;
+function CompareMessageFields(const Item1, Item2: TMessageField): Integer;
 begin
   Result := Item1.FieldNumber - Item2.FieldNumber;
 
