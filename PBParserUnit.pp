@@ -7,7 +7,7 @@ unit PBParserUnit;
 interface
 
 uses
-  PBDefinitionUnit, Classes, SysUtils, StreamUnit, gvector, ProtoHelperUnit;
+  PBDefinitionUnit, Classes, SysUtils, gvector;
 
 type
 
@@ -16,6 +16,7 @@ type
   TBaseProtoParser = class(TObject)
   private
     InputFilename: AnsiString;
+
   public
     class function GetParser(_InputFilename: AnsiString): TBaseProtoParser;
     class function Parse(_InputFilename: AnsiString): TProto;
@@ -86,20 +87,21 @@ type
     WholeFile: AnsiString;
     Stream: TStream;
 
-    function ExpectAll(const TokenStrs: array of AnsiString): Boolean;
-    function Expect(const TokenStr: AnsiString): Boolean;
-    function ExpectAll(Ts: array of TTokenKind): Boolean;
-    function ExpectOne(Ts: array of TTokenKind): Boolean;
-    function Expect(const TokenKind: TTokenKind): Boolean;
-
-    function NextTokenIsIn(Ts: array of TTokenKind): Boolean;
-    function NextTokenIsIn(Ts: array of AnsiString): Boolean;
   public
     constructor Create(_Stream: TStream);
     destructor Destroy; override;
 
     function GetNextToken: TToken;
     procedure Rewind(Count: Integer = 1);
+
+    function ExpectAll(const TokenStrs: array of AnsiString): Boolean;
+    function Expect(const TokenStr: AnsiString): Boolean;
+    function ExpectAll(const Ts: array of TTokenKind): Boolean;
+    function ExpectOne(const Ts: array of TTokenKind): Boolean;
+    function Expect(const TokenKind: TTokenKind): Boolean;
+
+    function NextTokenIsIn(const Ts: array of TTokenKind): Boolean;
+    function NextTokenIsIn(const Ts: array of AnsiString): Boolean;
 
   end;
 
@@ -432,7 +434,7 @@ begin
 
 end;
 
-function TTokenizer.ExpectAll(Ts: array of TTokenKind): Boolean;
+function TTokenizer.ExpectAll(const Ts: array of TTokenKind): Boolean;
 var
   TokenKind: TTokenKind;
 
@@ -458,7 +460,7 @@ begin
       [Token.TokenString, TokenStr]));
 end;
 
-function TTokenizer.ExpectOne(Ts: array of TTokenKind): Boolean;
+function TTokenizer.ExpectOne(const Ts: array of TTokenKind): Boolean;
 var
   Token: TToken;
   Kind: TTokenKind;
@@ -487,7 +489,7 @@ begin
       [Token.Kind, TokenKind]));
 end;
 
-function TTokenizer.NextTokenIsIn(Ts: array of TTokenKind): Boolean;
+function TTokenizer.NextTokenIsIn(const Ts: array of TTokenKind): Boolean;
 var
   Next: TToken;
   Kind: TTokenKind;
@@ -503,7 +505,7 @@ begin
   Result := False;
 end;
 
-function TTokenizer.NextTokenIsIn(Ts: array of AnsiString): Boolean;
+function TTokenizer.NextTokenIsIn(const Ts: array of AnsiString): Boolean;
 var
   Next: TToken;
   S: AnsiString;
