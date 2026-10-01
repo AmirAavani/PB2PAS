@@ -7,9 +7,9 @@ uses
   Classes,
   SysUtils,
   Math,
-  DelimitedProtoStreamUnit,
   ProtoHelperUnit,
   ProtoStreamUnit,
+  ZIOStreamUnit,
   fpjson,
   jsonparser,
   PBParserUnit,
@@ -452,11 +452,12 @@ type
 
             // Try different packed formats based on field type
             if (FieldDef.FieldType.Name = 'int32') or
-              (FieldDef.FieldType.Name = 'int64') or (FieldDef.FieldType.Name =
-              'uint32') or (FieldDef.FieldType.Name = 'uint64') or
+              (FieldDef.FieldType.Name = 'int64') or
+              (FieldDef.FieldType.Name = 'uint32') or
+              (FieldDef.FieldType.Name = 'uint64') or
               (FieldDef.FieldType.Name = 'sint32') or
-              (FieldDef.FieldType.Name = 'sint64') or (FieldDef.FieldType.Name =
-              'bool') then
+              (FieldDef.FieldType.Name = 'sint64') or
+              (FieldDef.FieldType.Name = 'bool') then
               PackedArray := TryParsePackedVarint(Data, Pos, Len)
             else if (FieldDef.FieldType.Name = 'fixed32') or
               (FieldDef.FieldType.Name = 'sfixed32') or
@@ -648,7 +649,7 @@ type
     MessageName: ansistring);
   var
     Pat: TPattern;
-    Reader: specialize TDelimitedProtoReader<TGenericMessage>;
+    Reader: specialize TZioReader<TGenericMessage>;
     Msg: TGenericMessage;
     MessageCount: integer;
     i: integer;
@@ -694,7 +695,7 @@ type
           WriteLn('  [', i, '] ', Pat.GetShardPath(i));
         WriteLn;
 
-        Reader := specialize TDelimitedProtoReader<TGenericMessage>.Create(Pat);
+        Reader := specialize TZioReader<TGenericMessage>.Create(Pat);
         try
           MessageCount := 0;
           Msg := TGenericMessage.Create;
@@ -726,71 +727,6 @@ type
     end;
   end;
 
-  procedure DumpSingleFile(const FilePath: string; ProtoMap: TProtoMap;
-    MessageName: ansistring);
-  var
-    FileStream: TFileStream;
-    ZStream: TDelimitedProtoStream;
-    Msg: TGenericMessage;
-    MessageCount: integer;
-    RootMessage: TMessage;
-    Proto: TProto;
-    it: TProtoMap.TPairEnumerator;
-  begin
-    WriteLn('Reading single ZIO file: ', FilePath);
-    WriteLn;
-
-    if not FileExists(FilePath) then
-    begin
-      WriteLn('ERROR: File not found: ', FilePath);
-      Halt(1);
-    end;
-
-    // Find root message by name
-    RootMessage := nil;
-    if ProtoMap <> nil then
-    begin
-      it := ProtoMap.GetEnumerator;
-      while it.MoveNext do
-      begin
-        Proto := it.Current.Value;
-        if Proto.Messages <> nil then
-        begin
-          RootMessage := Proto.Messages.ByName[MessageName];
-          if RootMessage <> nil then
-          begin
-            WriteLn('Using root message type: ', RootMessage.Name);
-            Break;
-          end;
-        end;
-      end;
-      it.Free;
-
-      if RootMessage = nil then
-        WriteLn('WARNING: Message type "', MessageName,
-          '" not found in proto. Using generic parsing.');
-    end;
-
-    ZStream := TDelimitedProtoStream.CreateReader(FilePath);
-    WriteLn('File size: ', FileStream.Size, ' bytes');
-    WriteLn;
-
-    MessageCount := 0;
-    Msg := TGenericMessage.Create;
-    Msg.RootMessageDef := RootMessage;
-    Msg.ProtoMap := ProtoMap;
-    while ZStream.ReadMessage(Msg) do
-    begin
-      Inc(MessageCount);
-      Msg.DumpAsJson(MessageCount);
-      Msg.Clear;
-    end;
-    Msg.Free;
-
-    WriteLn('Total messages read: ', MessageCount);
-    ZStream.Free;
-  end;
-
   { Main }
 
 var
@@ -805,54 +741,32 @@ begin
   WriteLn;
 
   Params := TZIODumpParams.Create;
-  try
-    ParamManagerUnit.InitAndParse('Verbosity=0', Params);
-    ParamManagerUnit.InitFromParameters(Params);
+  ParamManagerUnit.InitAndParse('Verbosity=0', Params);
+  ParamManagerUnit.InitFromParameters(Params);
 
-    ALoggerUnit.InitLogger(Params.Verbosity.Value);
+  ALoggerUnit.InitLogger(Params.Verbosity.Value);
 
-    if Params.InputFileName.Value = '' then
-    begin
-      PrintUsage;
-      Halt(1);
-    end;
-
-    Pattern := Params.InputFileName.Value;
-
-    // Parse proto file if provided
-    ProtoMap := nil;
-    if Params.ProtoFile.Value <> '' then
-    begin
-      WriteLn('Loading proto definitions from: ', Params.ProtoFile.Value);
-      try
-        ProtoMap := TBaseProtoParser.ParseAll(Params.ProtoFile.Value);
-        WriteLn('Proto file loaded successfully.');
-        WriteLn;
-      except
-        on E: Exception do
-        begin
-          WriteLn('WARNING: Failed to load proto file: ', E.Message);
-          WriteLn('Continuing without type information...');
-          WriteLn;
-          ProtoMap := nil;
-        end;
-      end;
-    end;
-
-    try
-      // Check if it's a sharded pattern (contains '@')
-      if Pos('@', Pattern) > 0 then
-        DumpShardedFiles(Pattern, ProtoMap, Params.MessageName.Value)
-      else
-        DumpSingleFile(Pattern, ProtoMap, Params.MessageName.Value);
-
-      WriteLn;
-      WriteLn('Done.');
-    finally
-      if ProtoMap <> nil then
-        ProtoMap.Free;
-    end;
-  finally
-    Params.Free;
+  if Params.InputFileName.Value = '' then
+  begin
+    PrintUsage;
+    Halt(1);
   end;
+
+  Pattern := Params.InputFileName.Value;
+
+  // Parse proto file if provided
+  ProtoMap := nil;
+  if Params.ProtoFile.Value <> '' then
+  begin
+    WriteLn('Loading proto definitions from: ', Params.ProtoFile.Value);
+    ProtoMap := TBaseProtoParser.ParseAll(Params.ProtoFile.Value);
+    WriteLn('Proto file loaded successfully.');
+    WriteLn;
+  end;
+
+  DumpShardedFiles(Pattern, ProtoMap, Params.MessageName.Value);
+
+  WriteLn;
+  WriteLn('Done.');
+  Params.Free;
 end.

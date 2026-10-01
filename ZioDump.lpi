@@ -27,6 +27,16 @@
       <Unit>
         <Filename Value="ZioDump.lpr"/>
       </Unit>
+      <Unit>
+        <Filename Value="modules/PB2PAS/ZIOStreamUnit.pp"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ZIOStreamUnit"/>
+      </Unit>
+      <Unit>
+        <Filename Value="modules/ALogger/ALoggerUnit.pp"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="ALoggerUnit"/>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
