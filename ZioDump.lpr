@@ -17,6 +17,7 @@ uses
   PBDefinitionUnit,
   ALoggerUnit,
   ParamsUnit,
+  PatternUnit,
   ParamManagerUnit;
 
 type
@@ -38,10 +39,14 @@ type
     FRawData: TByteArray;
     FRootMessageDef: TMessage;  // Schema definition if available
     FProtoMap: TProtoMap;        // All proto definitions
+
+  protected
+    procedure SaveToStream(Stream: TProtoStreamWriter); override;
+    function LoadFromStream(Stream: TProtoStreamReader; Len: integer): boolean;
+      override;
+
   public
     procedure Clear; override;
-    procedure SaveToStream(Stream: TProtoStreamWriter); override;
-    function LoadFromStream(Stream: TProtoStreamReader; Len: integer): boolean; override;
 
     procedure DumpToConsole(MessageNumber: integer);
     procedure DumpAsJson(MessageNumber: integer);

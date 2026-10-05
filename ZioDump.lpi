@@ -44,6 +44,11 @@
       <OtherUnitFiles Value="modules/Unicode-Functions;modules/ALogger;modules/Threading;modules/TemplatesUnit;modules/PB2PAS;ParamManager;modules/General-Purpose-Units"/>
       <UnitOutputDirectory Value="lib/$(TargetCPU)-$(TargetOS)"/>
     </SearchPaths>
+    <Linking>
+      <Debugging>
+        <DebugInfoType Value="dsDwarf3"/>
+      </Debugging>
+    </Linking>
   </CompilerOptions>
   <Debugging>
     <Exceptions>
