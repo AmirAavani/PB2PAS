@@ -9,7 +9,8 @@ uses
   Math,
   ProtoHelperUnit,
   ProtoStreamUnit,
-  ZIOStreamUnit,
+  DelimitedReaderUnit,
+  DelimitedWriterUnit,
   fpjson,
   jsonparser,
   PBParserUnit,
@@ -649,10 +650,11 @@ type
     MessageName: ansistring);
   var
     Pat: TPattern;
-    Reader: specialize TZioReader<TGenericMessage>;
+    Reader: specialize TDelimitedReader<TGenericMessage>;
     Msg: TGenericMessage;
     MessageCount: integer;
     i: integer;
+    ShardIndex: integer;
     RootMessage: TMessage;
     Proto: TProto;
     it: TProtoMap.TPairEnumerator;
@@ -695,17 +697,21 @@ type
           WriteLn('  [', i, '] ', Pat.GetShardPath(i));
         WriteLn;
 
-        Reader := specialize TZioReader<TGenericMessage>.Create(Pat);
+        Reader := specialize TDelimitedReader<TGenericMessage>.Create(Pat);
         try
           MessageCount := 0;
           Msg := TGenericMessage.Create;
           Msg.RootMessageDef := RootMessage;
           Msg.ProtoMap := ProtoMap;
           try
-            while Reader.ReadMessage(Msg) do
+            for ShardIndex := 0 to Pat.NumShards - 1 do
             begin
-              Inc(MessageCount);
-              Msg.DumpAsJson(MessageCount);
+              while Reader.ReadMessageFromShard(ShardIndex, Msg) do
+              begin
+                Inc(MessageCount);
+                Msg.DumpAsJson(MessageCount);
+              end;
+
             end;
           finally
             Msg.Free;

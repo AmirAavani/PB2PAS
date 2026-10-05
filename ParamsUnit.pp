@@ -22,6 +22,7 @@ type
     MessageName: TStringValue;
     ProtoFile: TStringValue;
     Verbosity: TIntValue;
+    KV: TBooleanValue;
   end;
 
 implementation
