@@ -653,12 +653,13 @@ type
   end;
 
   procedure DumpShardedFiles(const Pattern: string; ProtoMap: TProtoMap;
-    MessageName: ansistring; kv: Boolean);
+    MessageName: ansistring; kv: boolean);
   var
     Pat: TPattern;
     Reader: specialize TDelimitedReader<TGenericMessage>;
     Msg: TGenericMessage;
     MessageCount: integer;
+    Key: ansistring;
     i: integer;
     ShardIndex: integer;
     RootMessage: TMessage;
@@ -712,10 +713,24 @@ type
           try
             for ShardIndex := 0 to Pat.NumShards - 1 do
             begin
-              while Reader.ReadMessageFromShard(ShardIndex, Msg) do
+              if kv then
               begin
-                Inc(MessageCount);
-                Msg.DumpAsJson(MessageCount);
+                while Reader.ReadMessageFromShard(ShardIndex, Key, Msg) do
+                begin
+                  Inc(MessageCount);
+                  Write(Key, ':');
+                  Msg.DumpAsJson(MessageCount);
+                end;
+
+              end
+              else
+              begin
+                while Reader.ReadMessageFromShard(ShardIndex, Msg) do
+                begin
+                  Inc(MessageCount);
+                  Msg.DumpAsJson(MessageCount);
+                end;
+
               end;
 
             end;
