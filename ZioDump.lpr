@@ -642,6 +642,7 @@ type
     WriteLn('                             - single_file.zio for single file');
     WriteLn('  ProtoFile=<file>         : Proto file defining message schemas');
     WriteLn('  MessageName=<name>       : Name of the root message type in proto');
+    WriteLn('  KV=True                  : Dump is a Key value dump');
     WriteLn('  Verbosity=<level>        : Log verbosity level (default: 0)');
     WriteLn;
     WriteLn('Examples:');
@@ -652,7 +653,7 @@ type
   end;
 
   procedure DumpShardedFiles(const Pattern: string; ProtoMap: TProtoMap;
-    MessageName: ansistring);
+    MessageName: ansistring; kv: Boolean);
   var
     Pat: TPattern;
     Reader: specialize TDelimitedReader<TGenericMessage>;
@@ -775,7 +776,7 @@ begin
     WriteLn;
   end;
 
-  DumpShardedFiles(Pattern, ProtoMap, Params.MessageName.Value);
+  DumpShardedFiles(Pattern, ProtoMap, Params.MessageName.Value, Params.KV);
 
   WriteLn;
   WriteLn('Done.');
