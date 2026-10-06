@@ -776,7 +776,7 @@ begin
     WriteLn;
   end;
 
-  DumpShardedFiles(Pattern, ProtoMap, Params.MessageName.Value, Params.KV);
+  DumpShardedFiles(Pattern, ProtoMap, Params.MessageName.Value, Params.KV.Value);
 
   WriteLn;
   WriteLn('Done.');
